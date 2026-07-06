@@ -43,6 +43,8 @@ jobs:
       - name: Import check (app must construct without a live DB)
         working-directory: backend
         run: python -c "import main"
+        env:
+          JWT_SECRET_KEY: ci-only-dummy-key-not-used-in-production
 
   test-frontend:
     runs-on: ubuntu-latest

@@ -77,9 +77,10 @@ yarn-error.log*
 pnpm-debug.log*
 
 ######################################
-# PACKAGE LOCK FILES (optional)
+# PACKAGE LOCK FILES
 ######################################
-package-lock.json
+# package-lock.json is intentionally tracked (frontend/package-lock.json) —
+# CI's `npm ci` and dependency caching require a committed lockfile.
 yarn.lock
 pnpm-lock.yaml
 
