@@ -1,8 +1,9 @@
 FROM python:3.12-slim AS base
 
-# System deps needed by psycopg, xhtml2pdf/reportlab and sentence-transformers.
+# System deps needed by psycopg, xhtml2pdf/reportlab (compiles _rl_accel/_renderPM
+# from source on Python 3.12 - needs FreeType/JPEG/zlib headers) and sentence-transformers.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential libpq-dev \
+        build-essential libpq-dev libfreetype6-dev libjpeg-dev zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONUNBUFFERED=1 \
