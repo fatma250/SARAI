@@ -1,0 +1,550 @@
+\documentclass[11pt,a4paper]{report}
+
+% ---------- Encodage et langue ----------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+
+% ---------- Mise en page ----------
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\setstretch{1.15}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+% ---------- Couleurs ----------
+\usepackage{xcolor}
+\definecolor{navy}{HTML}{12213D}
+\definecolor{bluetitle}{HTML}{1D3A6E}
+\definecolor{grey}{HTML}{4B5563}
+\definecolor{codebg}{HTML}{0F172A}
+\definecolor{codefg}{HTML}{E2E8F0}
+\definecolor{calloutbg}{HTML}{EFF6FF}
+\definecolor{warnbg}{HTML}{FEF2F2}
+\definecolor{warnred}{HTML}{DC2626}
+
+% ---------- Titres ----------
+\titleformat{\chapter}[hang]{\normalfont\huge\bfseries\color{navy}}{\thechapter.}{12pt}{}
+\titleformat{\section}{\normalfont\Large\bfseries\color{navy}}{\thesection}{8pt}{}
+\titleformat{\subsection}{\normalfont\large\bfseries\color{bluetitle}}{\thesubsection}{8pt}{}
+
+% ---------- Liens et sommaire ----------
+\usepackage[hidelinks]{hyperref}
+\usepackage{tocloft}
+
+% ---------- Tableaux ----------
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{colortbl}
+
+% ---------- Blocs de code ----------
+\usepackage{listings}
+\lstdefinestyle{codebox}{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\footnotesize\color{codefg},
+  breaklines=true,
+  frame=none,
+  xleftmargin=8pt,
+  xrightmargin=8pt,
+  framexleftmargin=8pt,
+  framexrightmargin=8pt,
+  framesep=8pt,
+}
+\lstset{style=codebox}
+
+% ---------- Encadrés (callouts) ----------
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+
+\newtcolorbox{infobox}{
+  colback=calloutbg, colframe=calloutbg, boxrule=0pt,
+  leftrule=3pt, colframe=bluetitle,
+  arc=1pt, boxsep=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  breakable
+}
+\newtcolorbox{warnbox}{
+  colback=warnbg, colframe=warnbg, boxrule=0pt,
+  leftrule=3pt, colframe=warnred,
+  arc=1pt, boxsep=2pt, left=8pt, right=8pt, top=6pt, bottom=6pt,
+  breakable
+}
+
+\usepackage{enumitem}
+\setlist{itemsep=2pt, topsep=4pt}
+
+\begin{document}
+
+% ================= SOMMAIRE =================
+\renewcommand{\contentsname}{Sommaire}
+\tableofcontents
+\clearpage
+
+% ================= 1. INTRODUCTION =================
+\chapter{Introduction générale}
+
+Dans le cadre de ma formation, j'ai eu l'opportunité d'effectuer un stage portant sur la conception, le
+développement et la consolidation d'une plateforme web nommée \textbf{SARAI} (\emph{Stocktaking of Arab
+Regional AI Initiatives}), destinée à recenser et cartographier les initiatives d'intelligence artificielle
+dans la région arabe pour le compte de l'\textbf{AICTO} (Arab ICT Organization), organisation régionale
+œuvrant pour le développement des technologies de l'information et de la communication dans le monde arabe.
+
+Ce stage m'a permis de travailler sur une application full-stack complète, combinant une API backend
+construite avec le framework \textbf{FastAPI} (Python), une base de données relationnelle
+\textbf{PostgreSQL} enrichie de capacités de recherche vectorielle (\texttt{pgvector}), et une interface
+utilisateur moderne développée avec \textbf{React} et \textbf{Vite}. Le projet couvre un périmètre
+fonctionnel riche~: gestion des utilisateurs et des rôles, soumission et modération de projets IA,
+cartographie interactive par pays, tableau de bord statistique, moteur de recherche hybride (mots-clés,
+sémantique, plein texte), chatbot conversationnel, notifications, génération de rapports PDF, et prise en
+charge de trois langues (français, anglais, arabe) avec gestion du sens d'écriture bidirectionnel.
+
+Ce rapport présente dans un premier temps le contexte et les objectifs du projet, puis détaille les choix
+technologiques et l'architecture retenue, avant de décrire les principales réalisations effectuées durant
+le stage. Une attention particulière est portée aux travaux d'audit, de sécurisation et de nettoyage du
+code, qui ont constitué une part importante de la mission. Le rapport se conclut par un bilan des
+compétences acquises et des perspectives d'évolution du projet.
+
+% ================= 2. CONTEXTE =================
+\chapter{Contexte du projet}
+
+\section{Présentation de l'organisme d'accueil}
+
+L'AICTO (Arab ICT Organization) est une organisation régionale dont la mission est de promouvoir la
+coopération entre les pays arabes dans le domaine des technologies de l'information et de la communication.
+Dans ce cadre, l'organisation a souhaité disposer d'un outil numérique permettant de dresser un état des
+lieux (« stocktaking ») des initiatives d'intelligence artificielle menées dans les 22 pays de la région
+arabe, afin de favoriser le partage de connaissances, la mise en réseau des acteurs (startups, universités,
+laboratoires de recherche, agences gouvernementales, ONG, entreprises) et l'alignement de ces initiatives
+avec les Objectifs de Développement Durable (ODD) des Nations Unies.
+
+\section{Problématique et objectifs}
+
+Avant SARAI, les initiatives IA de la région n'étaient recensées dans aucun système centralisé~:
+l'information était dispersée entre rapports, sites institutionnels et bases de données locales non
+interopérables. Le projet répond donc aux objectifs suivants~:
+
+\begin{itemize}
+  \item Centraliser les données relatives aux projets IA, aux parties prenantes (organisations), aux
+    secteurs d'activité, aux technologies IA employées et aux ODD associés~;
+  \item Offrir une cartographie interactive permettant de visualiser la répartition géographique des
+    initiatives~;
+  \item Fournir un tableau de bord analytique pour le suivi des tendances (par pays, secteur, technologie,
+    statut)~;
+  \item Garantir la qualité des données via un workflow de modération (soumission puis validation par un
+    administrateur)~;
+  \item Rendre la plateforme accessible en français, anglais et arabe, compte tenu du public régional
+    visé~;
+  \item Assister les utilisateurs via un chatbot capable de répondre à des requêtes en langage naturel.
+\end{itemize}
+
+\section{Cahier des charges fonctionnel (synthèse)}
+
+\begin{longtable}{@{}p{4cm}p{10.5cm}@{}}
+\toprule
+\textbf{Module} & \textbf{Fonctionnalités attendues} \\
+\midrule
+\endhead
+Authentification & Inscription, vérification d'email, connexion, mot de passe oublié, gestion de rôles (organisation, modérateur, administrateur) \\
+Gestion de projets & Soumission, édition, association à un pays/secteur/technologies/ODD, statut de workflow, historique d'approbation \\
+Annuaire des parties prenantes & Fiche organisation, type, pays, secteur \\
+Cartographie & Carte interactive par pays avec indicateurs socio-économiques et statuts de projets \\
+Statistiques & Tableau de bord agrégé (répartition par pays, secteur, technologie, statut) \\
+Recherche & Recherche par mots-clés/filtres, recherche sémantique, option plein texte (Elasticsearch) \\
+Chatbot & Assistant conversationnel multilingue répondant sur la base des données de la plateforme \\
+Modération & File d'attente admin, approbation/rejet individuel ou en masse, notifications \\
+Ressources & Bibliothèque de rapports, jeux de données, livres blancs \\
+Export & Génération de fiches projet au format PDF \\
+Internationalisation & FR / EN / AR avec bascule RTL/LTR automatique \\
+\bottomrule
+\end{longtable}
+
+% ================= 3. ETUDE TECHNO =================
+\chapter{Étude et choix technologiques}
+
+\section{Architecture générale}
+
+Le projet adopte une architecture \textbf{monolithique modulaire} plutôt qu'une architecture en
+microservices. Ce choix, documenté explicitement dans la documentation d'architecture du projet, repose sur
+quatre arguments~:
+
+\begin{enumerate}
+  \item le domaine métier est fortement relationnel (jointures fréquentes entre projets, parties prenantes,
+    pays et ODD), ce qui rend un découpage en microservices coûteux sans bénéfice réel~;
+  \item la charge de la plateforme est modérée et ne justifie pas un scaling indépendant des composants~;
+  \item l'équipe de développement est restreinte, rendant la coordination de plusieurs services distants
+    contre-productive~;
+  \item les seules « coutures » naturelles du système — la recherche (Elasticsearch), les embeddings
+    sémantiques (pgvector) et le chatbot IA (Ollama / API compatible OpenAI) — sont déjà isolées dans des
+    modules de services dédiés et pourront être extraites plus tard sans toucher au cœur métier.
+\end{enumerate}
+
+\begin{infobox}
+\textbf{Point d'architecture retenu~:} ce raisonnement correspond à la démarche d'un \emph{Architecture
+Decision Record} (ADR) — une décision technique justifiée et documentée plutôt qu'un choix par défaut. Ce
+type de réflexion a constitué un apprentissage important durant le stage.
+\end{infobox}
+
+\section{Technologies côté backend}
+
+\begin{longtable}{@{}p{3cm}p{4.5cm}p{7cm}@{}}
+\toprule
+\textbf{Composant} & \textbf{Technologie} & \textbf{Rôle} \\
+\midrule
+\endhead
+Framework API & FastAPI 0.109 & Exposition des endpoints REST, validation automatique, documentation Swagger générée \\
+Serveur ASGI & Uvicorn & Exécution asynchrone de l'application \\
+ORM & SQLAlchemy 2.0 & Mapping objet-relationnel \\
+Validation & Pydantic 2.5 & Schémas de validation des requêtes/réponses (DTO) \\
+Base de données & PostgreSQL 16 (\texttt{pgvector/pgvector:pg16}) & Persistance relationnelle + recherche vectorielle, repli automatique sur SQLite en développement \\
+Authentification & JWT (\texttt{python-jose}), \texttt{passlib} (pbkdf2\_sha256) & Jetons d'accès, hachage sécurisé des mots de passe \\
+Recherche & Elasticsearch (optionnel), \texttt{sentence-transformers} + pgvector & Recherche plein texte et recherche sémantique par similarité d'embeddings \\
+Chatbot & Ollama (llama3.2, self-hosted) ou API compatible OpenAI & Assistant conversationnel \\
+Génération PDF & \texttt{xhtml2pdf} + Jinja2 & Export des fiches projet en PDF, avec résumé généré par IA \\
+Emails & SMTP (service dédié) & Vérification d'email, réinitialisation de mot de passe, notifications \\
+\bottomrule
+\end{longtable}
+
+\section{Technologies côté frontend}
+
+\begin{longtable}{@{}p{3.5cm}p{4cm}p{7cm}@{}}
+\toprule
+\textbf{Composant} & \textbf{Technologie} & \textbf{Rôle} \\
+\midrule
+\endhead
+Bibliothèque UI & React 18 & Construction de l'interface en composants \\
+Outil de build & Vite 5 & Bundling rapide, rechargement à chaud en développement \\
+Routage & \texttt{react-router-dom} v6 & Navigation SPA \\
+Client HTTP & \texttt{axios} & Appels à l'API backend \\
+Internationalisation & \texttt{i18next} / \texttt{react-i18next} & Traduction FR / EN / AR, détection de langue \\
+Visualisation & \texttt{recharts} & Graphiques du tableau de bord analytique \\
+Notifications UI & \texttt{react-toastify} & Messages toast avec support RTL \\
+Export PDF client & \texttt{jspdf}, \texttt{html2canvas} & Génération de documents côté navigateur \\
+\bottomrule
+\end{longtable}
+
+\section{Justification des choix}
+
+FastAPI a été retenu pour sa performance (asynchrone), sa validation de schémas intégrée via Pydantic, et sa
+documentation interactive générée automatiquement (Swagger UI), particulièrement utile pour la collaboration
+frontend/backend. PostgreSQL avec l'extension pgvector permet de combiner données relationnelles classiques
+et recherche par similarité vectorielle dans un seul système, évitant l'introduction d'une base de données
+spécialisée supplémentaire. Côté frontend, React et Vite offrent un environnement de développement rapide et
+un écosystème mature pour couvrir les besoins d'internationalisation, de theming et de visualisation de
+données.
+
+% ================= 4. CONCEPTION =================
+\chapter{Conception}
+
+\section{Architecture logicielle en couches (backend)}
+
+Le backend est organisé selon une architecture en couches, séparant clairement les responsabilités~:
+
+\begin{lstlisting}
+backend/app/
+|-- routers/       -> couche HTTP : endpoints REST (pas de logique metier)
+|-- services/      -> logique metier + integrations externes (ES, IA, mail, PDF)
+|-- models/        -> entites SQLAlchemy (persistance en base de donnees)
+|-- schemas/       -> DTO Pydantic (contrat de donnees a la frontiere HTTP)
+`-- dependencies.py -> authentification / autorisation transversale (JWT, RBAC)
+\end{lstlisting}
+\begin{center}\small\color{grey} Figure~1 --- Organisation en couches du backend FastAPI \end{center}
+
+\section{Modèle de données}
+
+Le schéma de base de données a fait l'objet d'une refonte vers une forme normalisée (troisième forme
+normale) comportant 18 tables. Les entités principales sont résumées ci-dessous~:
+
+\begin{longtable}{@{}p{3.5cm}p{10.5cm}@{}}
+\toprule
+\textbf{Entité} & \textbf{Description} \\
+\midrule
+\endhead
+\texttt{User} & Comptes utilisateurs~: email, mot de passe haché, rôle (organisation / modérateur / administrateur), statuts d'activation, de vérification d'email et d'approbation admin \\
+\texttt{Project} & Entité centrale~: projet IA, statut de workflow (en attente, approuvé, rejeté, idée, prototype, production, en cours, terminé), colonne d'embedding vectoriel pour la recherche sémantique \\
+\texttt{Stakeholder} & Organisations porteuses de projets (type, pays, secteur) \\
+\texttt{Country} & 22 pays arabes avec coordonnées géographiques \\
+\texttt{Sector} & Taxonomie des secteurs d'activité \\
+\texttt{SDG} & 17 Objectifs de Développement Durable de l'ONU \\
+\texttt{AITechnology} & Taxonomie des technologies d'IA (NLP, vision, robotique, LLM, etc.) \\
+\texttt{Comment}, \texttt{Approval} & Commentaires modérés et historique d'audit du workflow d'approbation \\
+\texttt{Notification} & Notifications utilisateur (approbation, rejet, commentaire, mention, système) \\
+\texttt{Resource} & Bibliothèque de ressources documentaires \\
+\texttt{VerificationToken}, \texttt{PasswordResetToken} & Jetons pour la vérification d'email et la réinitialisation de mot de passe \\
+\bottomrule
+\end{longtable}
+
+Des tables de liaison assurent les relations plusieurs-à-plusieurs entre projets et ODD, projets et
+technologies, projets et parties prenantes. Le modèle \texttt{Project} intègre également des champs métier
+enrichis (couverture géographique, tâches planifiées, impact attendu, budget, durée prévue), ajoutés
+progressivement au fil de l'évolution du cahier des charges.
+
+\section{Architecture de déploiement}
+
+\begin{lstlisting}
++----------------------------------------------------------+
+|                     Docker Compose                        |
+|                                                            |
+|  +-----------+   +--------------+   +--------------------+
+|  | frontend  |-->|   backend    |-->|         db          |
+|  | (Nginx)   |   | (FastAPI /   |   | (PostgreSQL 16 +    |
+|  | port 3001 |   |  Uvicorn)    |   |  extension pgvector) |
+|  +-----------+   |  port 8000   |   +--------------------+
+|                  +------+-------+                          |
+|                         | (profils optionnels)              |
+|            +------------+-------------+                    |
+|    +-------v------+           +--------v---------+          |
+|    | elasticsearch |           |      ollama       |          |
+|    | (profil       |           | (profil "ai" --   |          |
+|    |  "search")    |           |  chatbot local)   |          |
+|    +---------------+           +-------------------+          |
++----------------------------------------------------------+
+\end{lstlisting}
+\begin{center}\small\color{grey} Figure~2 --- Architecture de déploiement (docker-compose.yml) \end{center}
+
+Le service backend utilise une image Python 3.12 slim exécutée sous un utilisateur non privilégié. Le
+frontend est construit en deux étapes (build multi-stage)~: compilation Vite dans une image Node 22, puis
+service des fichiers statiques via Nginx, avec une configuration dédiée assurant le repli sur
+\texttt{index.html} pour le routage côté client (SPA). L'URL de l'API est injectée au moment du build via la
+variable d'environnement \texttt{VITE\_API\_URL}, ce qui permet de déployer la même image sur différents
+environnements sans recompilation.
+
+% ================= 5. REALISATION =================
+\chapter{Réalisation}
+
+\section{Authentification et gestion des rôles}
+
+L'authentification repose sur des jetons JWT. Lors de la connexion, le serveur génère un jeton signé
+(HS256) valable 24 heures, contenant l'identité et le rôle de l'utilisateur~:
+
+\begin{lstlisting}
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=True)
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+    payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+    ...
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, ...)
+\end{lstlisting}
+
+Trois rôles sont gérés~: organisation, modérateur et administrateur, contrôlés à la fois par une contrainte
+SQL au niveau de la base de données et par des dépendances FastAPI appliquées à l'ensemble des routes
+sensibles (par exemple, tout le routeur d'administration est protégé par
+\texttt{APIRouter(dependencies=[Depends(require\_admin)])}). Le processus de connexion impose également
+trois garde-fous métier avant d'autoriser l'accès~: l'email doit être vérifié, le compte doit avoir été
+approuvé par un administrateur, et le compte doit être actif.
+
+Côté client, le jeton est conservé dans le \texttt{localStorage} du navigateur puis réinjecté dans l'en-tête
+\texttt{Authorization: Bearer <token>} pour chaque appel nécessitant une authentification.
+
+\section{Gestion des projets IA et workflow de modération}
+
+La page de recensement des projets (\texttt{ProjectStocktaking}) constitue le cœur fonctionnel de
+l'application~: elle permet à une organisation de soumettre un projet en le rattachant à un pays, un ou
+plusieurs secteurs, une ou plusieurs technologies IA et un ou plusieurs Objectifs de Développement Durable.
+Chaque soumission entre dans un workflow de modération~: le projet est créé avec le statut « en attente »,
+puis un administrateur peut l'approuver, le rejeter (avec motif) ou demander une révision. Chaque changement
+de statut est tracé dans une table d'audit dédiée et déclenche une notification (en base et par email) à
+destination de l'auteur. Le tableau de bord d'administration permet en outre des actions groupées
+(approbation ou rejet en masse) afin de traiter efficacement un grand nombre de soumissions.
+
+\section{Cartographie interactive et statistiques}
+
+La cartographie des initiatives (page \texttt{KnowledgeMap}) affiche une carte des pays arabes avec, pour
+chaque pays, des indicateurs socio-économiques (population, PIB, indice de développement humain, devise) et
+un code couleur reflétant les statuts des projets qui y sont recensés. Il est à noter que, bien que les
+bibliothèques \texttt{leaflet} et \texttt{react-leaflet} figurent parmi les dépendances du projet, la carte a
+finalement été implémentée sous la forme d'un composant SVG entièrement personnalisé, avec une projection
+géographique codée manuellement — un choix permettant un contrôle visuel fin sur l'affichage des marqueurs
+par pays. Le tableau de bord statistique (page \texttt{Analytics}), quant à lui, s'appuie sur des
+agrégations calculées côté serveur et restituées sous forme de graphiques via la bibliothèque
+\texttt{recharts}.
+
+\section{Recherche et chatbot intelligent}
+
+La plateforme propose une recherche hybride combinant une recherche classique par mots-clés et filtres
+(pays, secteur, technologie), une recherche sémantique fondée sur des embeddings générés par
+\texttt{sentence-transformers} et comparés via pgvector, ainsi qu'une option de recherche plein texte via
+Elasticsearch lorsque ce service est activé. Un chatbot conversationnel est également intégré, alimenté par
+un modèle de langage exécuté localement via Ollama (modèle llama3.2) ou, en repli, par une API compatible
+OpenAI. Un mécanisme de normalisation d'alias multilingues permet au chatbot de comprendre des requêtes
+formulées en français ou en anglais faisant référence aux pays, secteurs ou technologies (par exemple,
+« projets IA santé Tunisie »).
+
+\section{Internationalisation et accessibilité}
+
+L'application est disponible en français, anglais et arabe, grâce à \texttt{i18next} et
+\texttt{react-i18next}. Au-delà de la simple traduction des textes, le passage à l'arabe déclenche une
+bascule complète de la mise en page en mode RTL (droite-à-gauche)~:
+
+\begin{lstlisting}
+const dir = i18n.language === 'ar' ? 'rtl' : 'ltr'
+<div className="app" dir={dir}>
+\end{lstlisting}
+
+Cette prise en charge s'étend jusqu'aux composants tiers, comme les notifications toast dont l'orientation
+est également adaptée (\texttt{rtl=\{dir === 'rtl'\}}). Un mode sombre/clair est par ailleurs disponible,
+géré par un contexte React persistant dans le \texttt{localStorage} et initialisé automatiquement selon la
+préférence système de l'utilisateur (\texttt{prefers-color-scheme}).
+
+\section{Notifications et génération de rapports PDF}
+
+Un système de notifications en base de données informe chaque utilisateur des événements le concernant
+(approbation ou rejet de projet, ajout de commentaire, mention, demande de révision), avec un compteur de
+messages non lus visible dans la barre de navigation. Par ailleurs, chaque fiche projet peut être exportée
+au format PDF~: côté serveur, cette génération s'appuie sur des gabarits Jinja2 associés à la bibliothèque
+\texttt{xhtml2pdf}, et peut inclure un résumé rédigé automatiquement par un modèle d'IA.
+
+% ================= 6. SECURITE =================
+\chapter{Sécurité, qualité et bonnes pratiques}
+
+Une part significative du stage a été consacrée à un travail d'audit, de sécurisation et de nettoyage du
+code existant. Cet audit, mené par analyse statique du code (parcours de l'arbre syntaxique, compilation,
+analyse des imports), a permis d'identifier et de corriger les points suivants~:
+
+\begin{warnbox}
+\textbf{Faille de sécurité critique n\textsuperscript{o}1 --- élévation de privilèges à l'inscription.} Le
+formulaire d'inscription public acceptait initialement un champ \texttt{role} transmis par le client, ce qui
+permettait à n'importe quel visiteur de créer un compte avec le rôle administrateur. Correction apportée~:
+le rôle est désormais forcé côté serveur à « organisation » pour toute inscription publique~; la création
+d'un compte administrateur nécessite l'exécution d'un script dédié, exécuté uniquement par un opérateur
+autorisé.
+\end{warnbox}
+
+\begin{warnbox}
+\textbf{Faille de sécurité critique n\textsuperscript{o}2 --- absence de vérification JWT sur les routes
+d'administration.} Certains endpoints d'administration ne vérifiaient pas systématiquement la présence ou la
+validité d'un jeton JWT. Un module centralisé (\texttt{dependencies.py}) a été créé et appliqué à l'ensemble
+du routeur d'administration, garantissant qu'aucune route sensible n'est accessible sans authentification et
+sans le rôle requis.
+\end{warnbox}
+
+Les autres actions de nettoyage et de fiabilisation menées durant le stage incluent~:
+
+\begin{itemize}
+  \item Suppression de code mort~: un service de recherche sémantique jamais référencé, un composant React
+    jamais importé, et environ 470~Ko de jeux de données commis par erreur dans le dépôt~;
+  \item Archivage d'une cinquantaine de scripts de diagnostic ponctuels et d'une trentaine de scripts de
+    migration devenus obsolètes, déplacés vers des répertoires d'archives dédiés afin d'alléger la base de
+    code active~;
+  \item Correction d'un bug de configuration~: huit fichiers du frontend codaient en dur l'adresse
+    \texttt{http://127.0.0.1:8000}, rendant tout déploiement hors environnement local impossible sans
+    modification du code source. La résolution de l'URL de l'API est désormais entièrement pilotée par la
+    variable d'environnement \texttt{VITE\_API\_URL}~;
+  \item Correction d'un problème de dépendances~: les bibliothèques \texttt{axios} et
+    \texttt{react-toastify}, utilisées par le frontend, étaient déclarées dans un \texttt{package.json} mal
+    positionné à la racine du dépôt plutôt que dans celui du frontend, ce qui aurait provoqué un échec de
+    build lors d'une installation propre des dépendances~;
+  \item Suppression de dépendances inutilisées (\texttt{weasyprint}, \texttt{leaflet.heat}) et de 54 imports
+    Python inutilisés dans le code backend~;
+  \item Ajout de la conteneurisation complète du projet (voir chapitre~7).
+\end{itemize}
+
+Ce travail d'audit a permis de consolider la fiabilité et la sécurité de la plateforme avant son
+déploiement, et constitue l'un des apports concrets les plus importants de ce stage.
+
+% ================= 7. DEPLOIEMENT =================
+\chapter{Déploiement et conteneurisation}
+
+Afin de faciliter le déploiement et la reproductibilité de l'environnement, l'ensemble de la plateforme a
+été conteneurisé à l'aide de Docker et Docker Compose. L'orchestration comprend~:
+
+\begin{itemize}
+  \item un service \texttt{db} basé sur l'image \texttt{pgvector/pgvector:pg16}, fournissant PostgreSQL avec
+    l'extension de recherche vectorielle~;
+  \item un service \texttt{backend}, construit à partir d'une image Python 3.12 slim, exécuté sous un
+    utilisateur non privilégié (\texttt{appuser}) pour limiter la surface d'attaque en cas de compromission
+    du conteneur~;
+  \item un service \texttt{frontend}, construit en plusieurs étapes (build Vite sous Node 22, puis service
+    des fichiers statiques via Nginx)~;
+  \item deux services optionnels activables via des profils Docker Compose~: \texttt{elasticsearch} (profil
+    \emph{search}) pour la recherche plein texte, et \texttt{ollama} (profil \emph{ai}) pour l'exécution
+    locale du modèle de langage utilisé par le chatbot.
+\end{itemize}
+
+Cette approche par profils permet de démarrer une configuration minimale pour le développement courant
+(\texttt{docker compose up}), tout en conservant la possibilité d'activer les fonctionnalités avancées à la
+demande (\texttt{docker compose --profile search --profile ai up}).
+
+% ================= 8. DIFFICULTES =================
+\chapter{Difficultés rencontrées et solutions apportées}
+
+\begin{longtable}{@{}p{6.5cm}p{7.5cm}@{}}
+\toprule
+\textbf{Difficulté} & \textbf{Solution apportée} \\
+\midrule
+\endhead
+Base de données historiquement dénormalisée, mêlant données de test et données réelles &
+  Refonte complète vers un schéma normalisé de 18 tables, documentée dans un schéma de base de données et un
+  diagramme entité-association dédiés \\
+Faille d'élévation de privilèges dans le flux d'inscription &
+  Audit de sécurité ciblé, correction du rôle forcé côté serveur et mise en place d'une vérification JWT
+  systématique \\
+Adresse de l'API backend codée en dur, empêchant tout déploiement hors localhost &
+  Externalisation de la configuration via la variable d'environnement \texttt{VITE\_API\_URL}, injectée au
+  moment du build du frontend \\
+Accumulation de scripts ponctuels et de code mort ralentissant la lisibilité du dépôt &
+  Campagne de nettoyage et d'archivage, avec suppression des éléments non référencés et déplacement des
+  scripts historiques vers des répertoires d'archives \\
+Nécessité de supporter l'arabe en plus du français et de l'anglais, avec une direction d'écriture opposée &
+  Mise en place d'une gestion dynamique de l'attribut \texttt{dir} (RTL/LTR) propagée jusqu'aux composants
+  tiers (notifications, mise en page) \\
+\bottomrule
+\end{longtable}
+
+% ================= 9. BILAN =================
+\chapter{Bilan personnel et compétences acquises}
+
+Ce stage m'a permis de développer et de consolider un ensemble de compétences techniques et
+méthodologiques~:
+
+\begin{itemize}
+  \item Développement d'API REST avec FastAPI
+  \item Modélisation de données relationnelles (SQLAlchemy)
+  \item Authentification JWT et contrôle d'accès basé sur les rôles
+  \item Développement frontend avec React et Vite
+  \item Internationalisation et accessibilité (i18n, RTL)
+  \item Recherche sémantique et embeddings vectoriels
+  \item Intégration de modèles de langage (LLM) via Ollama
+  \item Conteneurisation avec Docker et Docker Compose
+  \item Audit de sécurité et analyse statique de code
+  \item Documentation d'architecture (ADR)
+\end{itemize}
+
+Au-delà des aspects techniques, ce stage a été l'occasion de travailler sur un projet réel, déjà
+partiellement développé, nécessitant une phase de compréhension et d'audit avant toute nouvelle
+contribution — une situation représentative du travail sur des bases de code existantes en entreprise. La
+rédaction d'un rapport d'audit structuré et la priorisation des corrections (sécurité avant confort, code
+actif avant code historique) m'ont également permis de développer un sens critique vis-à-vis de la qualité
+logicielle.
+
+% ================= 10. CONCLUSION =================
+\chapter{Conclusion générale et perspectives}
+
+Le stage effectué au sein de l'AICTO sur le projet SARAI a permis de contribuer à la mise en place d'une
+plateforme complète de recensement des initiatives d'intelligence artificielle dans la région arabe,
+alliant un backend robuste (FastAPI, PostgreSQL, pgvector), une interface utilisateur riche et multilingue
+(React, i18next), et des fonctionnalités avancées telles que la recherche sémantique et le chatbot
+conversationnel. Le travail d'audit et de sécurisation mené en parallèle a permis d'améliorer
+significativement la fiabilité, la sécurité et la maintenabilité du projet avant son déploiement.
+
+\textbf{Perspectives d'évolution identifiées~:}
+
+\begin{itemize}
+  \item Migration du système de migrations de schéma vers un outil dédié tel qu'Alembic~;
+  \item Mise en place d'une suite de tests automatisés (pytest, TestClient) et d'une intégration continue
+    (CI)~;
+  \item Introduction d'un mécanisme de \emph{refresh token} pour renforcer la gestion des sessions JWT~;
+  \item Restriction de la configuration CORS via des variables d'environnement spécifiques à chaque
+    environnement de déploiement~;
+  \item Extraction progressive des services de recherche et d'IA en composants indépendants, si la charge ou
+    l'équipe venait à croître.
+\end{itemize}
+
+\end{document}

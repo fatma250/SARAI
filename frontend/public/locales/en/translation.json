@@ -1,0 +1,151 @@
+{
+  "nav": {
+    "home": "Home",
+    "stakeholders": "Stakeholders",
+    "projects": "Projects",
+    "sdgs": "SDGs",
+    "map": "Map",
+    "resources": "Resources",
+    "statistics": "Statistics",
+    "moderation": "Moderation",
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "myProfile": "My Profile",
+    "sarai": "SARAI",
+    "tagline": "Arab AI Initiative",
+    "language": "Language"
+  },
+  "home": {
+    "heroBadge": "The Arab World's AI Ecosystem",
+    "heroTitle": "Mapping the Future of",
+    "heroTitleHighlight": "Intelligence",
+    "heroTitleEnd": "in the Region",
+    "heroSubtitle": "Discover stakeholders, track projects, and explore AI policies across 22 Arab nations on the most comprehensive regional stocktaking platform.",
+    "searchPlaceholder": "Search projects, stakeholders, or countries...",
+    "explore": "Explore",
+    "submitProject": "Submit Project",
+    "interactiveMap": "Interactive Map",
+    "statsProjects": "Projects Tracked",
+    "statsStakeholders": "Stakeholders Identified",
+    "statsCountries": "Countries Covered",
+    "statsResources": "Resources"
+  },
+  "footer": {
+    "tagline": "Stocktaking of Arab Regional AI Initiatives",
+    "description": "A central hub for mapping, documenting, and promoting the Artificial Intelligence ecosystem within the Arab region.",
+    "platform": "Platform",
+    "stakeholderDirectory": "Stakeholder Directory",
+    "projectStocktaking": "Project Stocktaking",
+    "knowledgeMap": "Knowledge Map",
+    "resourceLibrary": "Resource Library",
+    "analyticsDashboard": "Analytics Dashboard",
+    "resources": "Resources",
+    "documentation": "Documentation",
+    "apiReference": "API Reference",
+    "bestPractices": "Best Practices",
+    "caseStudies": "Case Studies",
+    "contact": "Contact",
+    "copyright": "© 2024 SARAI - AICTO Initiative. All rights reserved.",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
+  },
+  "projects": {
+    "title": "AI Projects",
+    "submitProject": "Submit Project",
+    "closeForm": "Close Form",
+    "filters": "Filters",
+    "learnMore": "Learn More",
+    "stakeholders": "Stakeholder(s)",
+    "noProjects": "No projects found.",
+    "loading": "Loading projects..."
+  },
+  "stakeholders": {
+    "title": "Stakeholder Directory",
+    "searchPlaceholder": "Search stakeholders..."
+  },
+  "map": {
+    "title": "Interactive Map"
+  },
+  "resources": {
+    "title": "Resource Library",
+    "submitResource": "Submit Resource"
+  },
+  "statistics": {
+    "title": "Statistics"
+  },
+  "sdgs": {
+    "title": "Sustainable Development Goals"
+  },
+  "profile": {
+    "title": "My Profile",
+    "myProjects": "My Projects",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "reason": "Reason",
+    "submittedOn": "Submitted on",
+    "noProjects": "You haven't submitted any projects yet.",
+    "loading": "Loading your projects..."
+  },
+  "admin": {
+    "title": "Admin Dashboard",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "total": "Total",
+    "approve": "Approve & Publish",
+    "reject": "Reject",
+    "confirmReject": "Confirm Rejection",
+    "rejectReason": "Please specify why this project is being rejected.",
+    "rejectPlaceholder": "e.g. Insufficient description, duplicate entry, or incorrect sector categorization...",
+    "cancel": "Cancel",
+    "queueEmpty": "Queue is Empty",
+    "queueEmptyDesc": "All submitted projects have been reviewed.",
+    "loading": "Loading pending queue...",
+    "noProjects": "No pending projects.",
+    "submittedOn": "Submitted on",
+    "accessDashboard": "Access Dashboard",
+    "signOut": "Sign Out",
+    "welcomeBack": "Welcome back, Administrator"
+  },
+  "search": {
+    "title": "Search the SARAI Platform",
+    "placeholder": "Search projects, stakeholders, resources...",
+    "search": "Search",
+    "all": "All",
+    "projects": "Projects",
+    "stakeholders": "Stakeholders",
+    "resources": "Resources",
+    "filters": "Filters",
+    "clear": "Clear",
+    "country": "Country",
+    "sector": "Sector",
+    "technology": "AI Technology",
+    "stakeholderType": "Stakeholder Type",
+    "resourceType": "Resource Type",
+    "relevance": "Relevance",
+    "date": "Date",
+    "project": "Project",
+    "stakeholder": "Stakeholder",
+    "resource": "Resource",
+    "found": "Found",
+    "resultsFor": "results for",
+    "searchedFor": "searched for",
+    "noResults": "No results found",
+    "noResultsDesc": "Try different keywords or adjust your filters",
+    "startSearch": "Search the platform",
+    "startSearchDesc": "Type a query to search across projects, stakeholders, and resources",
+    "detected": "Detected"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "submit": "Submit",
+    "search": "Search",
+    "noResults": "No results found."
+  }
+}

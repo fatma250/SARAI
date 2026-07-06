@@ -1,0 +1,160 @@
+DELETED  (12K)  backend/app/services/semantic_search_service.py
+DELETED  (4.0K)  frontend/src/components/Card.jsx
+DELETED  (1.5M)  frontend/dist
+DELETED  (0)  sarai.db
+DELETED  (0)  backend/sarai.db
+DELETED  (192K)  projects_output.json
+DELETED  (248K)  projects_output_v2.json
+DELETED  (32K)  stakeholders_output.json
+DELETED  (4.0K)  check_counts.py
+DELETED  (4.0K)  check_db_temp.py
+DELETED  (4.0K)  debug_verification.py
+DELETED  (4.0K)  test_api_internal.py
+DELETED  (4.0K)  test_api_v2.py
+DELETED  (4.0K)  test_email_service.py
+DELETED  (4.0K)  test_smtp.py
+DELETED  (4.0K)  debug_db_state.py
+DELETED  (4.0K)  debug_schemas.py
+DELETED  (4.0K)  debug_stakeholders.py
+DELETED  (4.0K)  debug_users.py
+DELETED  (4.0K)  check_db_data.py
+DELETED  (4.0K)  check_db_details.py
+DELETED  (4.0K)  check_links.py
+DELETED  (4.0K)  check_projects_status.py
+DELETED  (4.0K)  check_sqlite_users.py
+DELETED  (4.0K)  list_data.py
+DELETED  (4.0K)  list_tables.py
+DELETED  (4.0K)  list_users_raw.py
+DELETED  (4.0K)  show_projects.py
+DELETED  (4.0K)  show_stakeholders.py
+DELETED  (4.0K)  verify_admin_pass.py
+DELETED  (8.0K)  verify_database_state.py
+DELETED  (4.0K)  verify_sarai.py
+DELETED  (8.0K)  analyze_current_data.py
+DELETED  (4.0K)  count_by_country.py
+DELETED  (4.0K)  fix_db_columns.py
+DELETED  (4.0K)  fix_missing_columns.py
+DELETED  (4.0K)  fix_passwords.py
+DELETED  (4.0K)  fix_status.py
+DELETED  (4.0K)  fix_user_columns.py
+DELETED  (4.0K)  final_fix.py
+DELETED  (4.0K)  emergency_auth_fix.py
+DELETED  (4.0K)  ensure_admin_user.py
+DELETED  (20K)  restore_all_projects.py
+DELETED  (4.0K)  restore_user.py
+DELETED  (4.0K)  copy_to_sarai.py
+DELETED  (4.0K)  create_sarai_db.py
+DELETED  (4.0K)  run_data_cleanup.py
+DELETED  (8.0K)  reseed_m2m.py
+DELETED  (8.0K)  simple_clean_data.py
+DELETED  (4.0K)  approve_all_users.py
+DELETED  (4.0K)  test_api_internal.py
+DELETED  (4.0K)  test_api_projects.py
+DELETED  (4.0K)  test_api_status.py
+MOVED    backend/scripts/ -> backend/scripts/scripts/
+MOVED    backend/scripts/ -> backend/scripts/scripts/
+MOVED    backend/scripts/ -> backend/scripts/scripts/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+ARCHIVED backend/scripts/legacy/ -> backend/scripts/legacy/
+MOVED    backend/init_db.py -> backend/scripts/init_db.py
+MOVED    backend/create_admin.py -> backend/scripts/create_admin.py
+MOVED    backend/seed_data.py -> backend/scripts/seed_data.py
+ARCHIVED backend/migrate_add_reset_token.py -> backend/scripts/legacy/migrate_add_reset_token.py
+ARCHIVED backend/migrate_countries.py -> backend/scripts/legacy/migrate_countries.py
+ARCHIVED backend/migrate_logo_column.py -> backend/scripts/legacy/migrate_logo_column.py
+ARCHIVED backend/migrate_pg_columns.py -> backend/scripts/legacy/migrate_pg_columns.py
+ARCHIVED backend/migrate_project_status.py -> backend/scripts/legacy/migrate_project_status.py
+ARCHIVED backend/migrate_project_user_relation.py -> backend/scripts/legacy/migrate_project_user_relation.py
+ARCHIVED backend/migrate_projects_country.py -> backend/scripts/legacy/migrate_projects_country.py
+ARCHIVED backend/migrate_projects_new_fields.py -> backend/scripts/legacy/migrate_projects_new_fields.py
+ARCHIVED backend/migrate_remove_fields.py -> backend/scripts/legacy/migrate_remove_fields.py
+ARCHIVED backend/migrate_sqlite_to_pg.py -> backend/scripts/legacy/migrate_sqlite_to_pg.py
+ARCHIVED backend/migrate_v2.py -> backend/scripts/legacy/migrate_v2.py
+ARCHIVED backend/migrate_v3.py -> backend/scripts/legacy/migrate_v3.py
+ARCHIVED backend/populate_country_flags.py -> backend/scripts/legacy/populate_country_flags.py
+ARCHIVED backend/populate_final.py -> backend/scripts/legacy/populate_final.py
+ARCHIVED backend/populate_real_data.py -> backend/scripts/legacy/populate_real_data.py
+ARCHIVED backend/populate_real_projects.py -> backend/scripts/legacy/populate_real_projects.py
+ARCHIVED backend/populate_realistic_data.py -> backend/scripts/legacy/populate_realistic_data.py
+ARCHIVED backend/populate_stakeholders.py -> backend/scripts/legacy/populate_stakeholders.py
+ARCHIVED backend/populate_v4.py -> backend/scripts/legacy/populate_v4.py
+ARCHIVED backend/seed_all_countries.py -> backend/scripts/legacy/seed_all_countries.py
+ARCHIVED backend/seed_countries.py -> backend/scripts/legacy/seed_countries.py
+ARCHIVED backend/seed_countries_fixed.py -> backend/scripts/legacy/seed_countries_fixed.py
+ARCHIVED backend/seed_real_data.py -> backend/scripts/legacy/seed_real_data.py
+ARCHIVED backend/seed_sdgs.py -> backend/scripts/legacy/seed_sdgs.py
+ARCHIVED backend/add_more_projects.py -> backend/scripts/legacy/add_more_projects.py
+ARCHIVED backend/add_projects_simple.py -> backend/scripts/legacy/add_projects_simple.py
+ARCHIVED backend/add_real_projects_v2.py -> backend/scripts/legacy/add_real_projects_v2.py
+ARCHIVED backend/clean_and_populate_real_data.py -> backend/scripts/legacy/clean_and_populate_real_data.py
+ARCHIVED backend/clean_fake_organizations.py -> backend/scripts/legacy/clean_fake_organizations.py
+ARCHIVED backend/clean_old_projects.py -> backend/scripts/legacy/clean_old_projects.py
+ARCHIVED backend/clean_real_projects.py -> backend/scripts/legacy/clean_real_projects.py
+ARCHIVED ARCHITECT_REPORT.md -> docs/archive/ARCHITECT_REPORT.md
+ARCHIVED COMPLETE_SOLUTION.md -> docs/archive/COMPLETE_SOLUTION.md
+ARCHIVED CURRENT_STATUS.md -> docs/archive/CURRENT_STATUS.md
+ARCHIVED FIX_STAKEHOLDERS_DISPLAY.md -> docs/archive/FIX_STAKEHOLDERS_DISPLAY.md
+ARCHIVED FRONTEND_FIX_SUMMARY.md -> docs/archive/FRONTEND_FIX_SUMMARY.md
+ARCHIVED NEXT_STEPS.md -> docs/archive/NEXT_STEPS.md
+ARCHIVED QUICK_GUIDE.md -> docs/archive/QUICK_GUIDE.md
+ARCHIVED QUICK_START.md -> docs/archive/QUICK_START.md
+ARCHIVED REFACTORING_PLAN.md -> docs/archive/REFACTORING_PLAN.md
+ARCHIVED REFACTORING_SUMMARY.md -> docs/archive/REFACTORING_SUMMARY.md
+ARCHIVED STAKEHOLDERS_FIX_SUMMARY.md -> docs/archive/STAKEHOLDERS_FIX_SUMMARY.md
+ARCHIVED STAKEHOLDERS_GUIDE.md -> docs/archive/STAKEHOLDERS_GUIDE.md
+ARCHIVED STAKEHOLDERS_SUMMARY.md -> docs/archive/STAKEHOLDERS_SUMMARY.md
+ARCHIVED START_BACKEND.md -> docs/archive/START_BACKEND.md
+ARCHIVED TESTING_CHECKLIST.md -> docs/archive/TESTING_CHECKLIST.md
+ARCHIVED WORK_SUMMARY.md -> docs/archive/WORK_SUMMARY.md
+MOVED    API_ENDPOINTS.md -> docs/API_ENDPOINTS.md
+MOVED    DATABASE_SCHEMA.md -> docs/DATABASE_SCHEMA.md
+MOVED    ERD_DIAGRAM.md -> docs/ERD_DIAGRAM.md
+MOVED    MIGRATION_GUIDE.md -> docs/MIGRATION_GUIDE.md
+ARCHIVED backend/DATA_CLEANUP_GUIDE.md -> docs/archive/
+EDIT     frontend/package.json: +axios +react-toastify (relocated from root); -leaflet.heat (unused dep)
+DELETED  package.json (root) - frontend deps relocated; tailwind/postcss/autoprefixer unused
+DELETED  package-lock.json (root) - stale, regenerated under frontend/
+EDIT     components/Chatbot.jsx: API_BASE standardized to env-driven (VITE_API_URL)
+EDIT     pages/SearchResults.jsx: API_BASE standardized to env-driven (VITE_API_URL)
+EDIT     pages/KnowledgeMap.jsx: API_BASE standardized to env-driven (VITE_API_URL)
+EDIT     pages/Analytics.jsx: API_BASE standardized to env-driven (VITE_API_URL)
+EDIT     pages/ProjectStocktaking.jsx: API_BASE standardized to env-driven (VITE_API_URL)
+EDIT     pages/SDGDirectory.jsx: API_BASE standardized to env-driven (VITE_API_URL)
+EDIT     pages/StakeholderDirectory.jsx: API_BASE standardized to env-driven (VITE_API_URL)
+EDIT     pages/AdminDashboard.jsx: API_BASE standardized to env-driven (VITE_API_URL)
+EDIT     frontend Profile: inline 127.0.0.1 URLs -> env-driven API_BASE
+EDIT     frontend CountryPage: inline 127.0.0.1 URLs -> env-driven API_BASE
+EDIT     frontend Home: inline 127.0.0.1 URLs -> env-driven API_BASE
+ADDED    frontend/.env.example (VITE_API_URL template)
+ADDED    backend/Dockerfile, backend/.dockerignore, frontend/Dockerfile, frontend/nginx.conf, frontend/.dockerignore, docker-compose.yml
+DELETED  uploads/ (root, empty stray; app uses backend/uploads)

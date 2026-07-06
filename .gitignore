@@ -1,0 +1,95 @@
+######################################
+# OS FILES
+######################################
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+######################################
+# IDE / EDITORS
+######################################
+.vscode/
+.idea/
+*.iml
+
+######################################
+# ENV FILES (SECRETS)
+######################################
+.env
+.env.*
+!.env.example
+
+######################################
+# PYTHON / FASTAPI BACKEND
+######################################
+# Virtual environment (VERY IMPORTANT)
+backend/venv/
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+
+# Databases
+*.db
+*.sqlite3
+backend/*.db
+backend/*.sqlite3
+sarai.db
+
+# Uploads / generated files
+backend/uploads/
+uploads/
+
+# Test / type check / build
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/dist/
+backend/build/
+.pytest_cache/
+.mypy_cache/
+
+# Logs
+*.log
+
+######################################
+# REACT / NODE FRONTEND
+######################################
+# Node modules (CRITICAL)
+node_modules/
+frontend/node_modules/
+
+# Build output
+frontend/dist/
+frontend/build/
+dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+######################################
+# PACKAGE LOCK FILES (optional)
+######################################
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+######################################
+# DOCKER (future safe)
+######################################
+docker-compose.override.yml
+
+######################################
+# MISC
+######################################
+*.tmp
+*.swp

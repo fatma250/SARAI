@@ -1,0 +1,151 @@
+{
+  "nav": {
+    "home": "Accueil",
+    "stakeholders": "Acteurs",
+    "projects": "Projets",
+    "sdgs": "ODD",
+    "map": "Carte",
+    "resources": "Ressources",
+    "statistics": "Statistiques",
+    "moderation": "Modération",
+    "signIn": "Connexion",
+    "signOut": "Déconnexion",
+    "myProfile": "Mon Profil",
+    "sarai": "SARAI",
+    "tagline": "Initiative IA Arabe",
+    "language": "Langue"
+  },
+  "home": {
+    "heroBadge": "L'Écosystème IA du Monde Arabe",
+    "heroTitle": "Cartographier l'Avenir de",
+    "heroTitleHighlight": "l'Intelligence",
+    "heroTitleEnd": "dans la Région",
+    "heroSubtitle": "Découvrez les acteurs, suivez les projets et explorez les politiques IA à travers 22 nations arabes sur la plateforme la plus complète de recensement régional.",
+    "searchPlaceholder": "Rechercher projets, acteurs ou pays...",
+    "explore": "Explorer",
+    "submitProject": "Soumettre un Projet",
+    "interactiveMap": "Carte Interactive",
+    "statsProjects": "Projets Recensés",
+    "statsStakeholders": "Acteurs Identifiés",
+    "statsCountries": "Pays Couverts",
+    "statsResources": "Ressources"
+  },
+  "footer": {
+    "tagline": "Recensement des Initiatives Régionales Arabes en IA",
+    "description": "Un hub central pour cartographier, documenter et promouvoir l'écosystème de l'Intelligence Artificielle dans la région arabe.",
+    "platform": "Plateforme",
+    "stakeholderDirectory": "Annuaire des Acteurs",
+    "projectStocktaking": "Recensement des Projets",
+    "knowledgeMap": "Carte des Connaissances",
+    "resourceLibrary": "Bibliothèque de Ressources",
+    "analyticsDashboard": "Tableau de Bord Analytique",
+    "resources": "Ressources",
+    "documentation": "Documentation",
+    "apiReference": "Référence API",
+    "bestPractices": "Bonnes Pratiques",
+    "caseStudies": "Études de Cas",
+    "contact": "Contact",
+    "copyright": "© 2024 SARAI - Initiative AICTO. Tous droits réservés.",
+    "privacyPolicy": "Politique de Confidentialité",
+    "termsOfService": "Conditions d'Utilisation"
+  },
+  "projects": {
+    "title": "Projets IA",
+    "submitProject": "Soumettre un Projet",
+    "closeForm": "Fermer le Formulaire",
+    "filters": "Filtres",
+    "learnMore": "En Savoir Plus",
+    "stakeholders": "Acteur(s)",
+    "noProjects": "Aucun projet trouvé.",
+    "loading": "Chargement des projets..."
+  },
+  "stakeholders": {
+    "title": "Annuaire des Acteurs",
+    "searchPlaceholder": "Rechercher un acteur..."
+  },
+  "map": {
+    "title": "Carte Interactive"
+  },
+  "resources": {
+    "title": "Bibliothèque de Ressources",
+    "submitResource": "Soumettre une Ressource"
+  },
+  "statistics": {
+    "title": "Statistiques"
+  },
+  "sdgs": {
+    "title": "Objectifs de Développement Durable"
+  },
+  "profile": {
+    "title": "Mon Profil",
+    "myProjects": "Mes Projets",
+    "pending": "En attente",
+    "approved": "Approuvé",
+    "rejected": "Rejeté",
+    "reason": "Raison",
+    "submittedOn": "Soumis le",
+    "noProjects": "Vous n'avez encore soumis aucun projet.",
+    "loading": "Chargement de vos projets..."
+  },
+  "admin": {
+    "title": "Tableau de Bord Admin",
+    "pending": "En attente",
+    "approved": "Approuvé",
+    "rejected": "Rejeté",
+    "total": "Total",
+    "approve": "Approuver & Publier",
+    "reject": "Rejeter",
+    "confirmReject": "Confirmer le Rejet",
+    "rejectReason": "Veuillez préciser la raison du rejet.",
+    "rejectPlaceholder": "Ex: Description insuffisante, doublon, ou catégorisation incorrecte...",
+    "cancel": "Annuler",
+    "queueEmpty": "La file d'attente est vide",
+    "queueEmptyDesc": "Tous les projets soumis ont été examinés.",
+    "loading": "Chargement de la file d'attente...",
+    "noProjects": "Aucun projet en attente.",
+    "submittedOn": "Soumis le",
+    "accessDashboard": "Accéder au Tableau de Bord",
+    "signOut": "Déconnexion",
+    "welcomeBack": "Bon retour, Administrateur"
+  },
+  "search": {
+    "title": "Rechercher sur la Plateforme SARAI",
+    "placeholder": "Rechercher projets, acteurs, ressources...",
+    "search": "Rechercher",
+    "all": "Tout",
+    "projects": "Projets",
+    "stakeholders": "Acteurs",
+    "resources": "Ressources",
+    "filters": "Filtres",
+    "clear": "Effacer",
+    "country": "Pays",
+    "sector": "Secteur",
+    "technology": "Technologie IA",
+    "stakeholderType": "Type d'Acteur",
+    "resourceType": "Type de Ressource",
+    "relevance": "Pertinence",
+    "date": "Date",
+    "project": "Projet",
+    "stakeholder": "Acteur",
+    "resource": "Ressource",
+    "found": "Trouvé",
+    "resultsFor": "résultats pour",
+    "searchedFor": "recherché pour",
+    "noResults": "Aucun résultat trouvé",
+    "noResultsDesc": "Essayez différents mots-clés ou ajustez vos filtres",
+    "startSearch": "Rechercher sur la plateforme",
+    "startSearchDesc": "Tapez une requête pour rechercher dans les projets, acteurs et ressources",
+    "detected": "Détecté"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "submit": "Soumettre",
+    "search": "Rechercher",
+    "noResults": "Aucun résultat trouvé."
+  }
+}

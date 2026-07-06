@@ -1,0 +1,151 @@
+{
+  "nav": {
+    "home": "الرئيسية",
+    "stakeholders": "الفاعلون",
+    "projects": "المشاريع",
+    "sdgs": "أهداف التنمية المستدامة",
+    "map": "الخريطة",
+    "resources": "الموارد",
+    "statistics": "الإحصائيات",
+    "moderation": "المراجعة",
+    "signIn": "تسجيل الدخول",
+    "signOut": "تسجيل الخروج",
+    "myProfile": "ملفي الشخصي",
+    "sarai": "SARAI",
+    "tagline": "مبادرة الذكاء الاصطناعي العربية",
+    "language": "اللغة"
+  },
+  "home": {
+    "heroBadge": "النظام البيئي للذكاء الاصطناعي في العالم العربي",
+    "heroTitle": "نرسم مستقبل",
+    "heroTitleHighlight": "الذكاء",
+    "heroTitleEnd": "في المنطقة",
+    "heroSubtitle": "اكتشف الفاعلين، وتابع المشاريع، واستكشف سياسات الذكاء الاصطناعي عبر 22 دولة عربية على المنصة الإقليمية الأكثر شمولاً لجرد المبادرات.",
+    "searchPlaceholder": "ابحث عن مشاريع، فاعلين أو دول...",
+    "explore": "استكشف",
+    "submitProject": "تقديم مشروع",
+    "interactiveMap": "الخريطة التفاعلية",
+    "statsProjects": "مشروع مُسجّل",
+    "statsStakeholders": "فاعل مُحدّد",
+    "statsCountries": "دولة مُغطاة",
+    "statsResources": "مورد"
+  },
+  "footer": {
+    "tagline": "جرد المبادرات الإقليمية العربية في الذكاء الاصطناعي",
+    "description": "مركز رئيسي لرسم وتوثيق وتعزيز النظام البيئي للذكاء الاصطناعي في المنطقة العربية.",
+    "platform": "المنصة",
+    "stakeholderDirectory": "دليل الفاعلين",
+    "projectStocktaking": "جرد المشاريع",
+    "knowledgeMap": "خريطة المعرفة",
+    "resourceLibrary": "مكتبة الموارد",
+    "analyticsDashboard": "لوحة التحليل",
+    "resources": "الموارد",
+    "documentation": "الوثائق",
+    "apiReference": "مرجع API",
+    "bestPractices": "أفضل الممارسات",
+    "caseStudies": "دراسات حالة",
+    "contact": "اتصل بنا",
+    "copyright": "© 2024 SARAI - مبادرة AICTO. جميع الحقوق محفوظة.",
+    "privacyPolicy": "سياسة الخصوصية",
+    "termsOfService": "شروط الخدمة"
+  },
+  "projects": {
+    "title": "مشاريع الذكاء الاصطناعي",
+    "submitProject": "تقديم مشروع",
+    "closeForm": "إغلاق النموذج",
+    "filters": "تصفية",
+    "learnMore": "معرفة المزيد",
+    "stakeholders": "فاعل(ون)",
+    "noProjects": "لم يتم العثور على مشاريع.",
+    "loading": "جارٍ تحميل المشاريع..."
+  },
+  "stakeholders": {
+    "title": "دليل الفاعلين",
+    "searchPlaceholder": "ابحث عن فاعل..."
+  },
+  "map": {
+    "title": "الخريطة التفاعلية"
+  },
+  "resources": {
+    "title": "مكتبة الموارد",
+    "submitResource": "تقديم مورد"
+  },
+  "statistics": {
+    "title": "الإحصائيات"
+  },
+  "sdgs": {
+    "title": "أهداف التنمية المستدامة"
+  },
+  "profile": {
+    "title": "ملفي الشخصي",
+    "myProjects": "مشاريعي",
+    "pending": "قيد الانتظار",
+    "approved": "مقبول",
+    "rejected": "مرفوض",
+    "reason": "السبب",
+    "submittedOn": "قدّم في",
+    "noProjects": "لم تقم بتقديم أي مشروع بعد.",
+    "loading": "جارٍ تحميل مشاريعك..."
+  },
+  "admin": {
+    "title": "لوحة تحكم المشرف",
+    "pending": "قيد الانتظار",
+    "approved": "مقبول",
+    "rejected": "مرفوض",
+    "total": "المجموع",
+    "approve": "قبول ونشر",
+    "reject": "رفض",
+    "confirmReject": "تأكيد الرفض",
+    "rejectReason": "يرجى تحديد سبب الرفض.",
+    "rejectPlaceholder": "مثال: وصف غير كافٍ، تكرار، أو تصنيف خاطئ...",
+    "cancel": "إلغاء",
+    "queueEmpty": "قائمة الانتظار فارغة",
+    "queueEmptyDesc": "تم مراجعة جميع المشاريع المقدمة.",
+    "loading": "جارٍ تحميل قائمة الانتظار...",
+    "noProjects": "لا توجد مشاريع قيد الانتظار.",
+    "submittedOn": "قدّم في",
+    "accessDashboard": "الدخول إلى لوحة التحكم",
+    "signOut": "تسجيل الخروج",
+    "welcomeBack": "مرحبًا بعودتك، أيها المشرف"
+  },
+  "search": {
+    "title": "ابحث في منصة SARAI",
+    "placeholder": "ابحث عن مشاريع، فاعلين، موارد...",
+    "search": "بحث",
+    "all": "الكل",
+    "projects": "المشاريع",
+    "stakeholders": "الفاعلون",
+    "resources": "الموارد",
+    "filters": "تصفية",
+    "clear": "مسح",
+    "country": "الدولة",
+    "sector": "القطاع",
+    "technology": "تقنية الذكاء الاصطناعي",
+    "stakeholderType": "نوع الفاعل",
+    "resourceType": "نوع المورد",
+    "relevance": "الصلة",
+    "date": "التاريخ",
+    "project": "مشروع",
+    "stakeholder": "فاعل",
+    "resource": "مورد",
+    "found": "وجد",
+    "resultsFor": "نتائج لـ",
+    "searchedFor": "بحث عن",
+    "noResults": "لم يتم العثور على نتائج",
+    "noResultsDesc": "جرّب كلمات مفتاحية مختلفة أو عدّل عوامل التصفية",
+    "startSearch": "ابحث في المنصة",
+    "startSearchDesc": "اكتب استعلامًا للبحث في المشاريع والفاعلين والموارد",
+    "detected": "تم الكشف"
+  },
+  "common": {
+    "loading": "جارٍ التحميل...",
+    "error": "خطأ",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "submit": "تقديم",
+    "search": "بحث",
+    "noResults": "لم يتم العثور على نتائج."
+  }
+}
