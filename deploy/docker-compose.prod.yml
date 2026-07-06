@@ -1,0 +1,56 @@
+# Production stack for the Ubuntu deploy host.
+#
+# Unlike the root docker-compose.yml (which builds images from source for
+# local dev), this pulls prebuilt images from Docker Hub. Image names/tags
+# come from deploy/manifest.env; DB_USER/DB_PASSWORD/DB_NAME come from
+# backend/.env — both must be sourced into the shell before invoking compose
+# (docker compose's own ${VAR} interpolation does not read env_file:), e.g.:
+#   set -a && source backend/.env && source deploy/manifest.env && set +a
+#   docker compose -f deploy/docker-compose.prod.yml up -d
+#
+# backend/.env must exist on this host with real production secrets
+# (JWT_SECRET_KEY, DB_PASSWORD, SMTP creds) — it is never committed to git.
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in backend/.env}
+      POSTGRES_DB: ${DB_NAME:-SARAI_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${BACKEND_IMAGE}:${IMAGE_TAG}
+    restart: unless-stopped
+    env_file:
+      - ../backend/.env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - backend_uploads:/app/uploads
+
+  frontend:
+    image: ${FRONTEND_IMAGE}:${IMAGE_TAG}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  pgdata:
+  backend_uploads:
