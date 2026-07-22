@@ -74,7 +74,9 @@ app = FastAPI(
 
 # CORS CONFIGURATION
 logger.info("[CORS] Configuring CORS middleware...")
-CORS_ORIGINS = [
+
+# Origines de dev toujours autorisées en local.
+_DEV_ORIGINS = [
     "http://localhost:3001",
     "http://127.0.0.1:3001",
     "http://localhost:3002",
@@ -88,6 +90,13 @@ CORS_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
+
+# Origines de production ajoutées via variable d'environnement, ex:
+#   CORS_EXTRA_ORIGINS=http://vps-eb207a4e.vps.ovh.net,https://sarai-aicto.org
+_extra = os.getenv("CORS_EXTRA_ORIGINS", "")
+_EXTRA_ORIGINS = [o.strip() for o in _extra.split(",") if o.strip()]
+
+CORS_ORIGINS = _DEV_ORIGINS + _EXTRA_ORIGINS
 
 app.add_middleware(
     CORSMiddleware,
