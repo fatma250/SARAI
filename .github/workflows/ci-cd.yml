@@ -145,6 +145,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: Main
+          # backend/.env holds production secrets and is intentionally
+          # untracked (.gitignore'd). The default clean step (`git clean
+          # -ffdx`) wipes ignored files too, deleting it on every run —
+          # keep it in place across checkouts.
+          clean: false
 
       - name: Login to Docker Hub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
