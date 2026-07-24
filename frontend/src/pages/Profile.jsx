@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  FaEnvelope, FaPhone, FaGlobe, FaMapMarkerAlt, FaRocket, FaStar
+  FaEnvelope, FaPhone, FaGlobe, FaMapMarkerAlt, FaRocket, FaStar, FaTrash, FaExclamationTriangle, FaTimes
 } from 'react-icons/fa'
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -16,6 +16,8 @@ function Profile() {
   const [toast, setToast] = useState(null)
   const [projects, setProjects] = useState([])
   const [projectsLoading, setProjectsLoading] = useState(true)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user')
@@ -122,6 +124,28 @@ function Profile() {
       description: user?.description || ''
     })
     setEditing(false)
+  }
+
+  const requestDeleteProject = (project) => setDeleteTarget(project)
+
+  const confirmDeleteProject = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
+      const res = await fetch(`${API_BASE}/api/projects/${deleteTarget.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Failed to delete project')
+      setProjects(prev => prev.filter(p => p.id !== deleteTarget.id))
+      setToast({ type: 'success', message: 'Project deleted successfully' })
+      setDeleteTarget(null)
+    } catch (err) {
+      setToast({ type: 'error', message: 'Failed to delete project' })
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const handleLogoUpload = async (e) => {
@@ -427,13 +451,25 @@ function Profile() {
                       <span className="profile-project-date">
                         Submitted on {new Date(project.submitted_at).toLocaleDateString()}
                       </span>
-                      <button
-                        type="button"
-                        className="profile-project-edit-btn"
-                        onClick={() => navigate(`/projects/${project.id}/edit`)}
-                      >
-                        Edit
-                      </button>
+                      <div className="profile-project-actions">
+                        <button
+                          type="button"
+                          className="profile-project-edit-btn"
+                          onClick={() => navigate(`/projects/${project.id}/edit`)}
+                        >
+                          Edit
+                        </button>
+                        {user?.role === 'admin' && (
+                          <button
+                            type="button"
+                            className="profile-project-delete-btn"
+                            onClick={() => requestDeleteProject(project)}
+                            title="Delete Project"
+                          >
+                            <FaTrash />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -443,6 +479,31 @@ function Profile() {
 
         </div>
       </div>
+
+      {deleteTarget && (
+        <div className="delete-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget && !deleting) setDeleteTarget(null) }}>
+          <div className="delete-modal-content">
+            <button type="button" className="delete-modal-close" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              <FaTimes />
+            </button>
+            <div className="delete-modal-icon">
+              <FaExclamationTriangle />
+            </div>
+            <h3 className="delete-modal-title">Delete this project?</h3>
+            <p className="delete-modal-text">
+              You're about to permanently delete <strong>"{deleteTarget.title}"</strong>. This action cannot be undone.
+            </p>
+            <div className="delete-modal-actions">
+              <button type="button" className="delete-modal-cancel" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+                Cancel
+              </button>
+              <button type="button" className="delete-modal-confirm" onClick={confirmDeleteProject} disabled={deleting}>
+                {deleting ? 'Deleting…' : <><FaTrash /> Delete Project</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .profile-page {
@@ -984,6 +1045,147 @@ function Profile() {
         .profile-project-edit-btn:hover {
           background: var(--primary-color);
           color: #fff;
+        }
+        .profile-project-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+        .profile-project-delete-btn {
+          flex-shrink: 0;
+          width: 30px;
+          height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 8px;
+          border: 1.5px solid #fee2e2;
+          background: transparent;
+          color: #ef4444;
+          cursor: pointer;
+          transition: 0.2s;
+        }
+        .profile-project-delete-btn:hover {
+          background: #ef4444;
+          border-color: #ef4444;
+          color: #fff;
+        }
+
+        .delete-modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.55);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          animation: deleteBackdropIn 0.2s ease-out both;
+          padding: 16px;
+        }
+        @keyframes deleteBackdropIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .delete-modal-content {
+          position: relative;
+          background: var(--white);
+          border-radius: 20px;
+          box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.35);
+          width: 100%;
+          max-width: 400px;
+          padding: 32px 28px 28px;
+          text-align: center;
+          animation: deleteModalIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes deleteModalIn {
+          from { opacity: 0; transform: translateY(16px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .delete-modal-close {
+          position: absolute;
+          top: 14px;
+          right: 14px;
+          width: 30px;
+          height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 8px;
+          border: none;
+          background: transparent;
+          color: var(--gray-400);
+          cursor: pointer;
+          transition: 0.2s;
+        }
+        .delete-modal-close:hover {
+          background: var(--gray-50);
+          color: var(--gray-700, #334155);
+        }
+        .delete-modal-icon {
+          width: 56px;
+          height: 56px;
+          margin: 0 auto 16px;
+          border-radius: 50%;
+          background: #fef2f2;
+          color: #ef4444;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+        }
+        .delete-modal-title {
+          margin: 0 0 10px;
+          font-size: 1.15rem;
+          font-weight: 800;
+          color: var(--gray-900, #0f172a);
+        }
+        .delete-modal-text {
+          margin: 0 0 24px;
+          font-size: 0.9rem;
+          line-height: 1.5;
+          color: var(--gray-400);
+        }
+        .delete-modal-text strong {
+          color: var(--gray-700, #334155);
+        }
+        .delete-modal-actions {
+          display: flex;
+          gap: 10px;
+        }
+        .delete-modal-cancel, .delete-modal-confirm {
+          flex: 1;
+          padding: 11px 16px;
+          border-radius: 10px;
+          font-size: 0.88rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        .delete-modal-cancel {
+          border: 1.5px solid var(--gray-200, #e2e8f0);
+          background: transparent;
+          color: var(--gray-700, #334155);
+        }
+        .delete-modal-cancel:hover {
+          background: var(--gray-50);
+        }
+        .delete-modal-confirm {
+          border: none;
+          background: #ef4444;
+          color: #fff;
+        }
+        .delete-modal-confirm:hover {
+          background: #dc2626;
+        }
+        .delete-modal-cancel:disabled, .delete-modal-confirm:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         @media (max-width: 768px) {

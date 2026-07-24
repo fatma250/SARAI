@@ -634,19 +634,35 @@ function AdminDashboard() {
                           <td colSpan="5" className="empty-table">No activity recorded yet</td>
                         </tr>
                       ) : (
-                        activity.map((entry) => (
-                          <tr key={entry.id}>
-                            <td>{new Date(entry.created_at).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-                            <td>{entry.reviewer_name}</td>
-                            <td>
-                              <span className={`status-badge ${entry.status === 'approved' ? 'active' : 'inactive'}`}>
-                                {entry.status === 'approved' ? 'Approved' : 'Rejected'}
-                              </span>
-                            </td>
-                            <td>{entry.project_title || `#${entry.project_id}`}</td>
-                            <td>{entry.rejection_reason || '—'}</td>
-                          </tr>
-                        ))
+                        activity.map((entry) => {
+                          const actionLabel = {
+                            approved: 'Approved',
+                            rejected: 'Rejected',
+                            edited: 'Edited',
+                            deleted: 'Deleted',
+                            pending: 'Pending',
+                            revision_requested: 'Revision Requested',
+                          }[entry.action] || entry.action
+                          const badgeClass = {
+                            approved: 'active',
+                            edited: 'edited',
+                            rejected: 'inactive',
+                            deleted: 'inactive',
+                          }[entry.action] || 'inactive'
+                          return (
+                            <tr key={entry.id}>
+                              <td>{new Date(entry.created_at).toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+                              <td>{entry.actor_name}</td>
+                              <td>
+                                <span className={`status-badge ${badgeClass}`}>
+                                  {actionLabel}
+                                </span>
+                              </td>
+                              <td>{entry.project_title || `#${entry.project_id}`}</td>
+                              <td>{entry.reason || '—'}</td>
+                            </tr>
+                          )
+                        })
                       )}
                     </tbody>
                   </table>
@@ -814,6 +830,7 @@ const styles = `
   .status-badge { font-size: 0.7rem; font-weight: 700; padding: 4px 8px; border-radius: 9999px; }
   .status-badge.active { background: #f0fdf4; color: #16a34a; }
   .status-badge.inactive { background: #f1f5f9; color: #64748b; }
+  .status-badge.edited { background: #fff7ed; color: #f59e0b; }
   
   .login-info { display: flex; flex-direction: column; }
   .login-date { font-weight: 600; color: #1e293b; font-size: 0.875rem; }
@@ -954,6 +971,7 @@ const styles = `
   [data-theme="dark"] .role-badge.organization { background: rgba(16,185,129,0.1); }
   [data-theme="dark"] .status-badge.active { background: rgba(22,163,74,0.1); }
   [data-theme="dark"] .status-badge.inactive { background: rgba(100,116,139,0.1); color: #64748b; }
+  [data-theme="dark"] .status-badge.edited { background: rgba(245,158,11,0.1); }
   [data-theme="dark"] .btn-approve-user { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.2); }
   [data-theme="dark"] .btn-delete-user { background: transparent; border-color: rgba(239,68,68,0.2); }
   [data-theme="dark"] .section-header h2 { color: #f1f5f9; }

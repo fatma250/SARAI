@@ -7,6 +7,7 @@ from app.models.project import Project
 from app.models.notification import Notification
 from app.models.user import User
 from app.models.approval import Approval
+from app.models.project_audit_log import ProjectAuditLog
 from app.schemas.project import ProjectResponse
 from app.schemas.user import UserResponse
 from datetime import datetime, timezone, timedelta
@@ -242,26 +243,47 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 
 @router.get("/activity")
 def get_activity_log(limit: int = 50, db: Session = Depends(get_db)):
-    rows = (
+    capped = min(limit, 200)
+
+    approval_rows = (
         db.query(Approval, Project.title, User.organization_name, User.email)
         .outerjoin(Project, Approval.project_id == Project.id)
         .outerjoin(User, Approval.reviewer_id == User.id)
         .order_by(Approval.created_at.desc())
-        .limit(min(limit, 200))
+        .limit(capped)
         .all()
     )
-    return [
+    entries = [
         {
-            "id": approval.id,
+            "id": f"approval-{approval.id}",
             "project_id": approval.project_id,
             "project_title": project_title,
-            "status": approval.status,
-            "previous_status": approval.previous_status,
-            "rejection_reason": approval.rejection_reason,
-            "reviewer_id": approval.reviewer_id,
-            "reviewer_name": (org_name or reviewer_email) if approval.reviewer_id else "Unknown",
+            "action": approval.status,  # approved / rejected / pending / revision_requested
+            "reason": approval.rejection_reason,
+            "actor_name": (org_name or reviewer_email) if approval.reviewer_id else "Unknown",
             "created_at": approval.created_at,
-            "reviewed_at": approval.reviewed_at,
         }
-        for approval, project_title, org_name, reviewer_email in rows
+        for approval, project_title, org_name, reviewer_email in approval_rows
     ]
+
+    audit_rows = (
+        db.query(ProjectAuditLog)
+        .order_by(ProjectAuditLog.created_at.desc())
+        .limit(capped)
+        .all()
+    )
+    entries += [
+        {
+            "id": f"audit-{log.id}",
+            "project_id": log.project_id,
+            "project_title": log.project_title,
+            "action": log.action,  # edited / deleted
+            "reason": log.details,
+            "actor_name": log.actor_name or "Unknown",
+            "created_at": log.created_at,
+        }
+        for log in audit_rows
+    ]
+
+    entries.sort(key=lambda e: e["created_at"], reverse=True)
+    return entries[:capped]

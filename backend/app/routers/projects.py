@@ -16,6 +16,7 @@ from app.models.document import ProjectDocument
 from app.models.stakeholder import Stakeholder
 from app.models.project_stakeholder import ProjectStakeholder
 from app.models.project_relationships import ProjectSDG
+from app.models.project_audit_log import ProjectAuditLog
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, ProjectListResponse
 from app.services.report_service import report_service
 from app.models.country import Country
@@ -337,8 +338,24 @@ def update_project(
         # (use /api/admin/projects/{id}/approve or /reject for that workflow).
         update_data.pop("status", None)
 
+    changed_fields = [
+        field for field, value in update_data.items()
+        if getattr(db_project, field) != value
+    ]
+
     for field, value in update_data.items():
         setattr(db_project, field, value)
+
+    if changed_fields:
+        db.add(ProjectAuditLog(
+            project_id=db_project.id,
+            project_title=db_project.title,
+            action="edited",
+            actor_id=current_user.id,
+            actor_name=current_user.organization_name or current_user.email,
+            details=", ".join(changed_fields),
+        ))
+
     db.commit()
     db.refresh(db_project)
     return db_project
@@ -348,11 +365,19 @@ def update_project(
 def delete_project(
     id: int,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin),
 ):
     db_project = db.query(Project).filter(Project.id == id).first()
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    db.add(ProjectAuditLog(
+        project_id=db_project.id,
+        project_title=db_project.title,
+        action="deleted",
+        actor_id=admin.id,
+        actor_name=admin.organization_name or admin.email,
+    ))
     db.delete(db_project)
     db.commit()
     return {"message": "Project deleted successfully"}

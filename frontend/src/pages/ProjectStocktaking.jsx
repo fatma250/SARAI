@@ -58,6 +58,9 @@ const getSDGNumber = (sdgStr) => {
 // yyyy-MM-ddTHH:mm:ss(.sss)(Z) → yyyy-MM-dd, for <input type="date">
 const formatDateForInput = (dateStr) => (dateStr ? dateStr.slice(0, 10) : '')
 
+// yyyy-MM-dd (from <input type="date">) → yyyy-MM-ddT00:00:00, for the API's datetime fields
+const formatDateForApi = (dateStr) => (dateStr ? `${dateStr}T00:00:00` : null)
+
 // API project shape (ProjectResponse) → form state shape
 const mapProjectToFormData = (project) => ({
   title: project.title || '',
@@ -81,8 +84,8 @@ const mapProjectToFormData = (project) => ({
 const mapFormDataToUpdatePayload = (formData) => ({
   title: formData.title,
   description: formData.description || null,
-  start_date: formData.start_date || null,
-  end_date: formData.end_date || null,
+  start_date: formatDateForApi(formData.start_date),
+  end_date: formatDateForApi(formData.end_date),
   sector: formData.sector,
   ai_technology: formData.technology,
   sdg_alignment: formData.sdg_alignment || null,
@@ -384,6 +387,16 @@ function ProjectStocktaking() {
     }
   }
 
+  const handleSessionExpired = () => {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('token_type')
+    localStorage.removeItem('user')
+    sessionStorage.removeItem('access_token')
+    sessionStorage.removeItem('user')
+    toast.error('Your session has expired. Please log in again.')
+    navigate('/login')
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
@@ -408,6 +421,7 @@ function ProjectStocktaking() {
           body: JSON.stringify(mapFormDataToUpdatePayload(formData))
         })
         if (!response.ok) {
+          if (response.status === 401) { handleSessionExpired(); return }
           const errorData = await response.json()
           let message = 'Failed to update project'
           if (response.status === 422 && Array.isArray(errorData.detail)) {
@@ -426,8 +440,8 @@ function ProjectStocktaking() {
           ai_technology: formData.technology,
           user_id: userId,
           status: 'pending',
-          start_date: formData.start_date || null,
-          end_date: formData.end_date || null,
+          start_date: formatDateForApi(formData.start_date),
+          end_date: formatDateForApi(formData.end_date),
         }
         if (formData.description) projectData.description = formData.description
         if (formData.sdg_alignment) projectData.sdg_alignment = formData.sdg_alignment
@@ -444,6 +458,7 @@ function ProjectStocktaking() {
         })
 
         if (!response.ok) {
+          if (response.status === 401) { handleSessionExpired(); return }
           const errorData = await response.json()
           let message = 'Failed to submit project'
           if (response.status === 422 && Array.isArray(errorData.detail)) {

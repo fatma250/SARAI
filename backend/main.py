@@ -6,6 +6,7 @@ load_dotenv()
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
+
     format='%(asctime)s [%(name)s] %(levelname)s: %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
@@ -29,6 +30,7 @@ from app.models.resource import Resource
 from app.models.country import Country
 from app.models.notification import Notification
 from app.models.sdg import SDG
+from app.models.project_audit_log import ProjectAuditLog
 
 def _run_migrations():
     from sqlalchemy import text, inspect as sa_inspect
