@@ -18,6 +18,7 @@ SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 SMTP_EMAIL = os.getenv("SMTP_EMAIL")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", SMTP_EMAIL)
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3001")
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
@@ -412,6 +413,86 @@ def send_rejection_email(recipient_email: str, organization_name: str, reason: s
 </body>
 </html>"""
     return _send_email(recipient_email, "Mise à jour concernant votre compte AICTO", html_body)
+
+
+def send_admin_new_user_alert(user_email: str, organization_name: str, user_id: int) -> bool:
+    """
+    Notify the admin that a new user registered and is awaiting review.
+    """
+    html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        .container {{ max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }}
+        .header {{ background: #ffffff; color: #1e293b; padding: 24px 20px; text-align: center; border-bottom: 2px solid #2563EB; }}
+        .content {{ padding: 32px 30px; color: #374151; line-height: 1.6; }}
+        .field {{ margin: 6px 0; font-size: 14px; }}
+        .button {{ display: inline-block; padding: 12px 28px; background: #2563EB; color: white !important;
+                   text-decoration: none; border-radius: 8px; margin: 20px 0 4px; font-weight: 600; }}
+        .footer {{ padding: 20px; background: #f9fafb; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }}
+    </style>
+</head>
+<body style="margin: 0; padding: 20px; background: #f3f4f6;">
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0; font-size: 18px; color: #2563EB;">AICTO Admin Alert</h1>
+        </div>
+        <div class="content">
+            <h2 style="margin-top: 0; font-size: 17px;">New user registered</h2>
+            <p class="field"><strong>Organization:</strong> {organization_name}</p>
+            <p class="field"><strong>Email:</strong> {user_email}</p>
+            <p class="field"><strong>User ID:</strong> {user_id}</p>
+            <p>This account is pending review before it can access the platform.</p>
+            <a href="{FRONTEND_URL}/admin" class="button">Review in Admin Panel</a>
+        </div>
+        <div class="footer">
+            <p>Arab ICT Organization (AICTO) &middot; Automated admin notification</p>
+        </div>
+    </div>
+</body>
+</html>"""
+    return _send_email(ADMIN_EMAIL, f"New user registration: {organization_name}", html_body)
+
+
+def send_admin_new_project_alert(project_title: str, organization_name: str, project_id: int) -> bool:
+    """
+    Notify the admin that a new project was submitted and is awaiting review.
+    """
+    html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        .container {{ max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }}
+        .header {{ background: #ffffff; color: #1e293b; padding: 24px 20px; text-align: center; border-bottom: 2px solid #2563EB; }}
+        .content {{ padding: 32px 30px; color: #374151; line-height: 1.6; }}
+        .field {{ margin: 6px 0; font-size: 14px; }}
+        .button {{ display: inline-block; padding: 12px 28px; background: #2563EB; color: white !important;
+                   text-decoration: none; border-radius: 8px; margin: 20px 0 4px; font-weight: 600; }}
+        .footer {{ padding: 20px; background: #f9fafb; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }}
+    </style>
+</head>
+<body style="margin: 0; padding: 20px; background: #f3f4f6;">
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0; font-size: 18px; color: #2563EB;">AICTO Admin Alert</h1>
+        </div>
+        <div class="content">
+            <h2 style="margin-top: 0; font-size: 17px;">New project submitted</h2>
+            <p class="field"><strong>Title:</strong> {project_title}</p>
+            <p class="field"><strong>Submitted by:</strong> {organization_name}</p>
+            <p class="field"><strong>Project ID:</strong> {project_id}</p>
+            <p>This project is pending review before it can be published.</p>
+            <a href="{FRONTEND_URL}/admin" class="button">Review in Admin Panel</a>
+        </div>
+        <div class="footer">
+            <p>Arab ICT Organization (AICTO) &middot; Automated admin notification</p>
+        </div>
+    </div>
+</body>
+</html>"""
+    return _send_email(ADMIN_EMAIL, f"New project submitted: {project_title}", html_body)
 
 
 def _send_email(recipient_email: str, subject: str, html_content: str) -> bool:

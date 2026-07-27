@@ -22,6 +22,7 @@ from app.services.report_service import report_service
 from app.models.country import Country
 from app.models.user import User
 from app.dependencies import get_current_user, get_current_user_optional, require_admin
+from app.services.email_service import send_admin_new_project_alert
 
 logger = logging.getLogger(__name__)
 
@@ -240,6 +241,7 @@ def submit_project(
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
+    send_admin_new_project_alert(db_project.title, current_user.organization_name or "User", db_project.id)
     return db_project
 
 
@@ -314,6 +316,7 @@ def create_project(
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
+    send_admin_new_project_alert(db_project.title, current_user.organization_name or "User", db_project.id)
     return db_project
 
 

@@ -14,7 +14,7 @@ from passlib.context import CryptContext
 from jose import jwt
 import os
 from uuid import uuid4
-from app.services.email_service import send_welcome_email, send_reset_email
+from app.services.email_service import send_welcome_email, send_reset_email, send_admin_new_user_alert
 from app.dependencies import SECRET_KEY, ALGORITHM
 import logging
 
@@ -73,6 +73,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.refresh(db_user)
 
     send_welcome_email(db_user.email, db_user.organization_name or "User")
+    send_admin_new_user_alert(db_user.email, db_user.organization_name or "User", db_user.id)
 
     return db_user
 
