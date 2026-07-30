@@ -63,7 +63,10 @@
     "readyToContribute": "Ready to Contribute?",
     "readyDesc": "Join our growing network and help map the future of AI in the Arab world.",
     "joinCommunity": "Join the Community",
-    "learnMore": "Learn More"
+    "learnMore": "Learn More",
+    "welcomeBackTitle": "Welcome back, {{name}}!",
+    "welcomeBackDesc": "Manage your submissions and keep your organization's AI initiatives up to date.",
+    "manageProjects": "Manage My Projects"
   },
   "footer": {
     "tagline": "Stocktaking of Arab Regional AI Initiatives",

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
-from sqlalchemy.orm import Session
-from typing import List
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_
+from typing import List, Optional
 from pydantic import BaseModel
 from app.database import get_db
 from app.models.project import Project
@@ -8,6 +9,7 @@ from app.models.notification import Notification
 from app.models.user import User
 from app.models.approval import Approval
 from app.models.project_audit_log import ProjectAuditLog
+from app.models.country import Country
 from app.schemas.project import ProjectResponse
 from app.schemas.user import UserResponse
 from datetime import datetime, timezone, timedelta
@@ -29,6 +31,32 @@ router = APIRouter(dependencies=[Depends(require_admin)])
 @router.get("/projects/pending", response_model=List[ProjectResponse])
 def get_pending_projects(db: Session = Depends(get_db)):
     return db.query(Project).filter(Project.status == "pending").all()
+
+@router.get("/projects", response_model=List[ProjectResponse])
+def get_all_projects(
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    sector: Optional[str] = None,
+    country: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    List projects of any status for admin moderation, with search/filter support.
+    """
+    query = db.query(Project).options(
+        joinedload(Project.owner),
+        joinedload(Project.country),
+    )
+    if status:
+        query = query.filter(Project.status == status)
+    if sector:
+        query = query.filter(Project.sector == sector)
+    if country:
+        query = query.join(Country, Country.id == Project.country_id).filter(Country.name == country)
+    if search:
+        pattern = f"%{search}%"
+        query = query.filter(or_(Project.title.ilike(pattern), Project.description.ilike(pattern)))
+    return query.order_by(Project.submitted_at.desc()).limit(500).all()
 
 @router.get("/users/pending", response_model=List[UserResponse])
 def get_pending_users(db: Session = Depends(get_db)):

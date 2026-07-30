@@ -231,7 +231,7 @@ function Home() {
               </div>
             </Link>
 
-            <Link to="/analytics" className="module-card card-compact">
+            <Link to="/statistics" className="module-card card-compact">
               <div className="card-content">
                 <FaChartLine className="compact-icon" />
                 <h4>Analytics</h4>
@@ -255,17 +255,31 @@ function Home() {
       {/* Community CTA */}
       <section className="cta-section">
         <div className="container">
-          <div className="cta-box">
-            <div className="cta-text">
-              <h2>Ready to contribute?</h2>
-              <p>Join the regional effort and showcase your AI initiatives to the world.</p>
+          {user ? (
+            <div className="cta-box">
+              <div className="cta-text">
+                <h2>{t('home.welcomeBackTitle', { name: user.organization_name })}</h2>
+                <p>{t('home.welcomeBackDesc')}</p>
+              </div>
+              <div className="cta-actions">
+                <Link to="/projects" className="btn-solid"><FaRocket /> {t('home.manageProjects')}</Link>
+                <Link to="/profile" className="btn-link">{t('nav.myProfile')}</Link>
+              </div>
+              <div className="cta-decoration"></div>
             </div>
-            <div className="cta-actions">
-              <Link to="/register" className="btn-solid">Get Started</Link>
-              <Link to="/resources" className="btn-link">Learn More</Link>
+          ) : (
+            <div className="cta-box">
+              <div className="cta-text">
+                <h2>Ready to contribute?</h2>
+                <p>Join the regional effort and showcase your AI initiatives to the world.</p>
+              </div>
+              <div className="cta-actions">
+                <Link to="/register" className="btn-solid">Get Started</Link>
+                <Link to="/resources" className="btn-link">Learn More</Link>
+              </div>
+              <div className="cta-decoration"></div>
             </div>
-            <div className="cta-decoration"></div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -618,7 +632,7 @@ function Home() {
         .cta-text p { font-size: 1.1rem; color: rgba(255,255,255,0.8); }
 
         .cta-actions { display: flex; gap: 16px; }
-        .btn-solid { background: white; color: var(--p-primary); padding: 16px 32px; border-radius: 16px; font-weight: 700; text-decoration: none; transition: 0.3s; }
+        .btn-solid { background: white; color: var(--p-primary); padding: 16px 32px; border-radius: 16px; font-weight: 700; text-decoration: none; transition: 0.3s; display: inline-flex; align-items: center; gap: 10px; }
         .btn-link { color: white; padding: 16px 32px; font-weight: 700; text-decoration: none; border-radius: 16px; transition: 0.3s; }
         .btn-solid:hover { transform: scale(1.05); }
         .btn-link:hover { background: rgba(255,255,255,0.12); }

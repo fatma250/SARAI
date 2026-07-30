@@ -53,7 +53,7 @@ function Footer() {
             <div className="footer-column">
               <h4>{t('footer.contact')}</h4>
               <ul className="contact-list">
-                <li><FaEnvelope /> hajjemfatma6@gmail.com</li>
+                <li><FaEnvelope /> contact@aicto.org</li>
                 <li><FaMapMarkerAlt /> Arab League, Cairo, Egypt</li>
               </ul>
             </div>

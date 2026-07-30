@@ -63,7 +63,10 @@
     "readyToContribute": "Prêt à Contribuer ?",
     "readyDesc": "Rejoignez notre réseau en expansion et contribuez à cartographier l'avenir de l'IA dans le monde arabe.",
     "joinCommunity": "Rejoindre la Communauté",
-    "learnMore": "En Savoir Plus"
+    "learnMore": "En Savoir Plus",
+    "welcomeBackTitle": "Bon retour, {{name}} !",
+    "welcomeBackDesc": "Gérez vos soumissions et gardez les initiatives IA de votre organisation à jour.",
+    "manageProjects": "Gérer Mes Projets"
   },
   "footer": {
     "tagline": "Recensement des Initiatives Régionales Arabes en IA",

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { FaClipboardList, FaCheckCircle, FaTimesCircle, FaEye, FaSignOutAlt, FaGlobeAmericas, FaLayerGroup, FaMicrochip, FaCalendarAlt, FaBuilding, FaUsers, FaTrash, FaUserClock, FaEnvelope, FaUserCheck, FaUserSlash, FaHistory } from 'react-icons/fa'
+import { FaClipboardList, FaCheckCircle, FaTimesCircle, FaEye, FaSignOutAlt, FaGlobeAmericas, FaLayerGroup, FaMicrochip, FaCalendarAlt, FaBuilding, FaUsers, FaTrash, FaUserClock, FaEnvelope, FaUserCheck, FaUserSlash, FaHistory, FaExclamationTriangle, FaEdit, FaSearch } from 'react-icons/fa'
 import { toast } from 'react-toastify'
 import { useTranslation } from 'react-i18next'
 
@@ -11,7 +11,7 @@ function AdminDashboard() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loginError, setLoginError] = useState('')
-  const [pendingProjects, setPendingProjects] = useState([])
+  const [projects, setProjects] = useState([])
   const [users, setUsers] = useState([])
   const [pendingUsers, setPendingUsers] = useState([])
   const [activity, setActivity] = useState([])
@@ -22,18 +22,28 @@ function AdminDashboard() {
   const [actionLoading, setActionLoading] = useState(null)
   const [selectedProjectIds, setSelectedProjectIds] = useState(new Set())
 
+  // Project search & filters (moderation)
+  const [projectSearch, setProjectSearch] = useState('')
+  const [projectStatusFilter, setProjectStatusFilter] = useState('pending') // 'all', 'pending', 'approved', 'rejected'
+  const [projectSectorFilter, setProjectSectorFilter] = useState('all')
+
   // Rejection Modal State
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [rejectProjectId, setRejectProjectId] = useState(null)
   const [isBulkReject, setIsBulkReject] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
 
+  // Delete User Modal State
+  const [deleteUserTarget, setDeleteUserTarget] = useState(null)
+
+  // Edit / Delete Project Modal State
+  const [editProjectTarget, setEditProjectTarget] = useState(null)
+  const [editForm, setEditForm] = useState(null)
+  const [deleteProjectTarget, setDeleteProjectTarget] = useState(null)
+
   useEffect(() => {
     if (token) {
-      if (activeTab === 'projects') {
-        fetchPendingProjects()
-        setSelectedProjectIds(new Set())
-      } else if (activeTab === 'users') {
+      if (activeTab === 'users') {
         fetchUsers()
       } else if (activeTab === 'approvals') {
         fetchPendingUsers()
@@ -43,6 +53,16 @@ function AdminDashboard() {
       fetchStats()
     }
   }, [token, activeTab, userFilter])
+
+  useEffect(() => {
+    if (!token || activeTab !== 'projects') return
+    setSelectedProjectIds(new Set())
+    const handle = setTimeout(() => {
+      fetchProjects()
+    }, 300)
+    return () => clearTimeout(handle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, activeTab, projectSearch, projectStatusFilter, projectSectorFilter])
 
   const fetchPendingUsers = async () => {
     try {
@@ -128,18 +148,22 @@ function AdminDashboard() {
     setToken(null)
   }
 
-  const fetchPendingProjects = async () => {
+  const fetchProjects = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${API_BASE}/api/admin/projects/pending`, {
+      const params = new URLSearchParams()
+      if (projectSearch.trim()) params.set('search', projectSearch.trim())
+      if (projectStatusFilter !== 'all') params.set('status', projectStatusFilter)
+      if (projectSectorFilter !== 'all') params.set('sector', projectSectorFilter)
+      const res = await fetch(`${API_BASE}/api/admin/projects?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
         const data = await res.json()
-        setPendingProjects(data)
+        setProjects(data)
       }
     } catch (err) {
-      console.error('Error fetching pending projects:', err)
+      console.error('Error fetching projects:', err)
     } finally {
       setLoading(false)
     }
@@ -182,7 +206,7 @@ function AdminDashboard() {
       if (res.ok) {
         toast.success(`${selectedProjectIds.size} project(s) approved and published!`)
         setSelectedProjectIds(new Set())
-        fetchPendingProjects()
+        fetchProjects()
         fetchStats()
       } else {
         const errData = await res.json()
@@ -243,7 +267,7 @@ function AdminDashboard() {
       })
       if (res.ok) {
         toast.success('Project approved and published successfully!')
-        fetchPendingProjects()
+        fetchProjects()
         fetchStats()
       } else {
         const errData = await res.json()
@@ -257,9 +281,11 @@ function AdminDashboard() {
     }
   }
 
-  const handleDeleteUser = async (userId) => {
-    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) return
-    
+  const requestDeleteUser = (user) => setDeleteUserTarget(user)
+
+  const confirmDeleteUser = async () => {
+    if (!deleteUserTarget) return
+    const userId = deleteUserTarget.id
     setActionLoading(userId)
     try {
       const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
@@ -268,6 +294,7 @@ function AdminDashboard() {
       })
       if (res.ok) {
         toast.success('User deleted successfully')
+        setDeleteUserTarget(null)
         fetchUsers()
         fetchStats()
       } else {
@@ -310,7 +337,7 @@ function AdminDashboard() {
         toast.info(isBulkReject ? `${selectedProjectIds.size} project(s) rejected.` : 'Project has been rejected.')
         setShowRejectModal(false)
         if (isBulkReject) setSelectedProjectIds(new Set())
-        fetchPendingProjects()
+        fetchProjects()
         fetchStats()
       } else {
         const errData = await res.json()
@@ -318,6 +345,83 @@ function AdminDashboard() {
       }
     } catch (err) {
       console.error(`Error rejecting project:`, err)
+      toast.error('Network error: ' + err.message)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const openEditModal = (project) => {
+    setEditProjectTarget(project)
+    setEditForm({
+      title: project.title || '',
+      description: project.description || '',
+      sector: project.sector || '',
+      ai_technology: project.ai_technology || '',
+      website: project.website || '',
+      status: project.status || 'pending',
+    })
+  }
+
+  const closeEditModal = () => {
+    setEditProjectTarget(null)
+    setEditForm(null)
+  }
+
+  const handleEditFieldChange = (field, value) => {
+    setEditForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const submitEditProject = async () => {
+    if (!editProjectTarget || !editForm) return
+    if (!editForm.title.trim()) {
+      toast.warning('Title cannot be empty.')
+      return
+    }
+    setActionLoading('edit')
+    try {
+      const res = await fetch(`${API_BASE}/api/projects/${editProjectTarget.id}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      })
+      if (res.ok) {
+        toast.success('Project updated successfully!')
+        closeEditModal()
+        fetchProjects()
+        fetchStats()
+      } else {
+        const errData = await res.json()
+        toast.error('Failed to update: ' + (errData.detail || 'Unknown error'))
+      }
+    } catch (err) {
+      toast.error('Network error: ' + err.message)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const requestDeleteProject = (project) => setDeleteProjectTarget(project)
+
+  const confirmDeleteProject = async () => {
+    if (!deleteProjectTarget) return
+    const projectId = deleteProjectTarget.id
+    setActionLoading(`delete-${projectId}`)
+    try {
+      const res = await fetch(`${API_BASE}/api/projects/${projectId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (res.ok) {
+        toast.success('Project deleted successfully')
+        setDeleteProjectTarget(null)
+        fetchProjects()
+        fetchStats()
+      } else {
+        const errData = await res.json()
+        toast.error('Failed to delete project: ' + (errData.detail || 'Unknown error'))
+      }
+    } catch (err) {
       toast.error('Network error: ' + err.message)
     } finally {
       setActionLoading(null)
@@ -401,25 +505,25 @@ function AdminDashboard() {
           <div className="content-section">
             <div className="section-header">
               <h2>
-                {activeTab === 'projects' ? 'Awaiting Moderation' :
+                {activeTab === 'projects' ? 'Project Moderation' :
                  activeTab === 'users' ? 'User Management' :
                  activeTab === 'activity' ? 'Activity Log' : 'Account Approvals'}
               </h2>
               <span className="count-badge">
-                {activeTab === 'projects' ? `${pendingProjects.length} Projects` :
+                {activeTab === 'projects' ? `${projects.length} Projects` :
                  activeTab === 'users' ? `${users.length} Users` :
                  activeTab === 'activity' ? `${activity.length} Entries` : `${pendingUsers.length} Pending`}
               </span>
-              
+
               {activeTab === 'users' && (
                 <div className="filter-tabs">
-                  <button 
+                  <button
                     className={`filter-btn ${userFilter === 'all' ? 'active' : ''}`}
                     onClick={() => setUserFilter('all')}
                   >
                     All Users
                   </button>
-                  <button 
+                  <button
                     className={`filter-btn ${userFilter === 'connected' ? 'active' : ''}`}
                     onClick={() => setUserFilter('connected')}
                   >
@@ -429,6 +533,41 @@ function AdminDashboard() {
               )}
             </div>
 
+            {activeTab === 'projects' && (
+              <div className="project-toolbar">
+                <div className="search-input-wrap">
+                  <FaSearch className="search-icon" />
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Search by title or description..."
+                    value={projectSearch}
+                    onChange={(e) => setProjectSearch(e.target.value)}
+                  />
+                </div>
+                <select
+                  className="filter-select"
+                  value={projectStatusFilter}
+                  onChange={(e) => setProjectStatusFilter(e.target.value)}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                <select
+                  className="filter-select"
+                  value={projectSectorFilter}
+                  onChange={(e) => setProjectSectorFilter(e.target.value)}
+                >
+                  <option value="all">All Sectors</option>
+                  {Array.from(new Set(projects.map(p => p.sector).filter(Boolean))).sort().map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {loading ? (
               <div className="dashboard-loader">
                 <div className="spinner"></div>
@@ -436,11 +575,15 @@ function AdminDashboard() {
               </div>
             ) : activeTab === 'projects' ? (
               /* Projects Content */
-              pendingProjects.length === 0 ? (
+              projects.length === 0 ? (
                 <div className="empty-dashboard">
                   <div className="empty-icon">🛡️</div>
-                  <h3>Queue is Empty</h3>
-                  <p>All submitted projects have been reviewed.</p>
+                  <h3>No Projects Found</h3>
+                  <p>
+                    {projectSearch || projectStatusFilter !== 'all' || projectSectorFilter !== 'all'
+                      ? 'Try adjusting your search or filters.'
+                      : 'All submitted projects have been reviewed.'}
+                  </p>
                 </div>
               ) : (
                 <>
@@ -458,7 +601,7 @@ function AdminDashboard() {
                     </div>
                   )}
                 <div className="pending-grid">
-                  {pendingProjects.map((project) => (
+                  {projects.map((project) => (
                     <div key={project.id} className={`moderation-card animate-up ${selectedProjectIds.has(project.id) ? 'selected' : ''}`}>
                       <div className="card-top">
                         <input
@@ -470,7 +613,11 @@ function AdminDashboard() {
                         <div className="card-info">
                           <div className="card-header-main">
                             <h3>{project.title}</h3>
-                            <div className="status-label">Pending Review</div>
+                            <div className={`status-label ${project.status}`}>
+                              {project.status === 'pending' ? 'Pending Review' :
+                               project.status === 'approved' ? 'Approved' :
+                               project.status === 'rejected' ? 'Rejected' : project.status}
+                            </div>
                           </div>
                           <div className="card-meta">
                             <span className="meta-tag"><FaGlobeAmericas /> {project.country?.name || 'Unknown Country'}</span>
@@ -516,19 +663,37 @@ function AdminDashboard() {
                       
                       <div className="card-footer">
                         <div className="card-actions">
-                          <button 
-                            className="btn-action-reject" 
-                            onClick={() => openRejectModal(project.id)}
-                            disabled={actionLoading === project.id}
+                          {project.status === 'pending' && (
+                            <>
+                              <button
+                                className="btn-action-reject"
+                                onClick={() => openRejectModal(project.id)}
+                                disabled={actionLoading === project.id}
+                              >
+                                Reject Submission
+                              </button>
+                              <button
+                                className="btn-action-approve"
+                                onClick={() => handleApprove(project.id)}
+                                disabled={actionLoading === project.id}
+                              >
+                                {actionLoading === project.id ? 'Processing...' : 'Approve & Publish'}
+                              </button>
+                            </>
+                          )}
+                          <button
+                            className="btn-action-edit"
+                            onClick={() => openEditModal(project)}
+                            disabled={actionLoading === `delete-${project.id}`}
                           >
-                            Reject Submission
+                            <FaEdit /> Edit
                           </button>
-                          <button 
-                            className="btn-action-approve" 
-                            onClick={() => handleApprove(project.id)}
-                            disabled={actionLoading === project.id}
+                          <button
+                            className="btn-action-delete"
+                            onClick={() => requestDeleteProject(project)}
+                            disabled={actionLoading === `delete-${project.id}`}
                           >
-                            {actionLoading === project.id ? 'Processing...' : 'Approve & Publish'}
+                            <FaTrash /> Delete
                           </button>
                         </div>
                       </div>
@@ -598,9 +763,9 @@ function AdminDashboard() {
                               </div>
                             </td>
                             <td>
-                              <button 
-                                className="btn-delete-user" 
-                                onClick={() => handleDeleteUser(user.id)}
+                              <button
+                                className="btn-delete-user"
+                                onClick={() => requestDeleteUser(user)}
                                 disabled={actionLoading === user.id}
                                 title="Delete User"
                               >
@@ -757,12 +922,125 @@ function AdminDashboard() {
             </div>
             <div className="modal-footer">
               <button className="btn-secondary" onClick={() => setShowRejectModal(false)}>Cancel</button>
-              <button 
-                className="btn-danger" 
+              <button
+                className="btn-danger"
                 onClick={handleReject}
                 disabled={!rejectReason.trim() || actionLoading}
               >
                 Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Modal */}
+      {deleteUserTarget && (
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget && actionLoading !== deleteUserTarget.id) setDeleteUserTarget(null) }}>
+          <div className="modal-content animate-up confirm-modal">
+            <div className="modal-header">
+              <h3>Delete User</h3>
+              <button className="close-btn" onClick={() => setDeleteUserTarget(null)} disabled={actionLoading === deleteUserTarget.id}><FaTimesCircle /></button>
+            </div>
+            <div className="modal-body confirm-modal-body">
+              <div className="confirm-modal-icon"><FaExclamationTriangle /></div>
+              <p>
+                You're about to permanently delete <strong>{deleteUserTarget.organization_name || deleteUserTarget.email}</strong>
+                {deleteUserTarget.organization_name ? <> ({deleteUserTarget.email})</> : null}. This action cannot be undone.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setDeleteUserTarget(null)} disabled={actionLoading === deleteUserTarget.id}>Cancel</button>
+              <button
+                className="btn-danger"
+                onClick={confirmDeleteUser}
+                disabled={actionLoading === deleteUserTarget.id}
+              >
+                {actionLoading === deleteUserTarget.id ? 'Deleting…' : <><FaTrash /> Delete User</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Project Modal */}
+      {editProjectTarget && editForm && (
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget && actionLoading !== 'edit') closeEditModal() }}>
+          <div className="modal-content animate-up edit-modal">
+            <div className="modal-header">
+              <h3>Edit Project</h3>
+              <button className="close-btn" onClick={closeEditModal} disabled={actionLoading === 'edit'}><FaTimesCircle /></button>
+            </div>
+            <div className="modal-body edit-modal-body">
+              <div className="form-group">
+                <label>Title</label>
+                <input type="text" value={editForm.title} onChange={(e) => handleEditFieldChange('title', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Description</label>
+                <textarea rows="4" value={editForm.description} onChange={(e) => handleEditFieldChange('description', e.target.value)}></textarea>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Sector</label>
+                  <input type="text" value={editForm.sector} onChange={(e) => handleEditFieldChange('sector', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>AI Technology</label>
+                  <input type="text" value={editForm.ai_technology} onChange={(e) => handleEditFieldChange('ai_technology', e.target.value)} />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Website</label>
+                  <input type="text" value={editForm.website} onChange={(e) => handleEditFieldChange('website', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>Status</label>
+                  <select value={editForm.status} onChange={(e) => handleEditFieldChange('status', e.target.value)}>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={closeEditModal} disabled={actionLoading === 'edit'}>Cancel</button>
+              <button
+                className="btn-action-approve"
+                onClick={submitEditProject}
+                disabled={actionLoading === 'edit'}
+              >
+                {actionLoading === 'edit' ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Project Modal */}
+      {deleteProjectTarget && (
+        <div className="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget && actionLoading !== `delete-${deleteProjectTarget.id}`) setDeleteProjectTarget(null) }}>
+          <div className="modal-content animate-up confirm-modal">
+            <div className="modal-header">
+              <h3>Delete Project</h3>
+              <button className="close-btn" onClick={() => setDeleteProjectTarget(null)} disabled={actionLoading === `delete-${deleteProjectTarget.id}`}><FaTimesCircle /></button>
+            </div>
+            <div className="modal-body confirm-modal-body">
+              <div className="confirm-modal-icon"><FaExclamationTriangle /></div>
+              <p>
+                You're about to permanently delete <strong>{deleteProjectTarget.title}</strong>. This action cannot be undone.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setDeleteProjectTarget(null)} disabled={actionLoading === `delete-${deleteProjectTarget.id}`}>Cancel</button>
+              <button
+                className="btn-danger"
+                onClick={confirmDeleteProject}
+                disabled={actionLoading === `delete-${deleteProjectTarget.id}`}
+              >
+                {actionLoading === `delete-${deleteProjectTarget.id}` ? 'Deleting…' : <><FaTrash /> Delete Project</>}
               </button>
             </div>
           </div>
@@ -880,7 +1158,18 @@ const styles = `
   .meta-tag svg { color: #3b82f6; }
   
   .status-label { background: #fff7ed; color: #c2410c; padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid #ffedd5; }
-  
+  .status-label.approved { background: #f0fdf4; color: #16a34a; border-color: #dcfce7; }
+  .status-label.rejected { background: #fef2f2; color: #ef4444; border-color: #fee2e2; }
+
+  /* Project Toolbar */
+  .project-toolbar { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+  .search-input-wrap { position: relative; flex: 1; min-width: 220px; }
+  .search-input-wrap .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.875rem; }
+  .search-input { width: 100%; padding: 10px 14px 10px 38px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.875rem; outline: none; transition: 0.2s; background: #fff; color: #1e293b; }
+  .search-input:focus { border-color: #3b82f6; }
+  .filter-select { padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.875rem; outline: none; background: #fff; color: #1e293b; cursor: pointer; transition: 0.2s; }
+  .filter-select:focus { border-color: #3b82f6; }
+
   .project-body { margin-bottom: 24px; }
   .project-preview { color: #475569; line-height: 1.6; margin-bottom: 20px; font-size: 0.9375rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   
@@ -898,11 +1187,16 @@ const styles = `
   .admin-file-link:hover { text-decoration: underline; }
 
   .card-footer { display: flex; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #f1f5f9; }
-  .card-actions { display: flex; gap: 12px; }
+  .card-actions { display: flex; gap: 12px; flex-wrap: wrap; }
   .btn-action-reject { background: #fff; border: 1px solid #e2e8f0; color: #64748b; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.875rem; }
   .btn-action-reject:hover { background: #f1f5f9; color: #ef4444; border-color: #fca5a5; }
   .btn-action-approve { background: #0f172a; border: none; color: #fff; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.875rem; }
   .btn-action-approve:hover { background: #334155; transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+  .btn-action-edit { background: #eff6ff; border: 1px solid #dbeafe; color: #2563eb; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-action-edit:hover { background: #2563eb; color: #fff; }
+  .btn-action-delete { background: #fff; border: 1px solid #fee2e2; color: #ef4444; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-action-delete:hover { background: #ef4444; color: #fff; }
+  .btn-action-edit:disabled, .btn-action-delete:disabled { opacity: 0.6; cursor: not-allowed; }
 
   /* Modal */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -916,9 +1210,26 @@ const styles = `
   .modal-body textarea { width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; font-family: inherit; font-size: 0.9375rem; outline: none; transition: 0.2s; resize: none; }
   .modal-body textarea:focus { border-color: #3b82f6; ring: 2px solid #3b82f6; }
   .modal-footer { padding: 16px 24px 24px; display: flex; gap: 12px; justify-content: flex-end; }
+
+  .edit-modal { max-width: 560px; }
+  .edit-modal-body .form-group { margin-bottom: 16px; }
+  .edit-modal-body .form-group:last-child { margin-bottom: 0; }
+  .edit-modal-body label { display: block; font-size: 0.8125rem; font-weight: 600; margin-bottom: 6px; color: #475569; }
+  .edit-modal-body input, .edit-modal-body select, .edit-modal-body textarea { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.875rem; font-family: inherit; outline: none; transition: 0.2s; background: #fff; color: #1e293b; }
+  .edit-modal-body input:focus, .edit-modal-body select:focus, .edit-modal-body textarea:focus { border-color: #3b82f6; }
+  .edit-modal-body textarea { resize: vertical; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
   .btn-secondary { background: #fff; border: 1px solid #e2e8f0; color: #64748b; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.875rem; }
-  .btn-danger { background: #ef4444; border: none; color: #fff; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.875rem; }
+  .btn-danger { background: #ef4444; border: none; color: #fff; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 8px; }
   .btn-danger:hover { background: #dc2626; }
+  .btn-danger:disabled, .btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .confirm-modal { max-width: 420px; }
+  .confirm-modal-body { text-align: center; padding-top: 8px; }
+  .confirm-modal-body p { margin: 0; }
+  .confirm-modal-icon { width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 50%; background: #fef2f2; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+  [data-theme="dark"] .confirm-modal-icon { background: rgba(239,68,68,0.15); }
 
   /* Login */
   .admin-login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f8fafc; padding: 20px; }
@@ -985,6 +1296,13 @@ const styles = `
   [data-theme="dark"] .btn-action-reject:hover { background: rgba(239,68,68,0.1); color: #f87171; border-color: rgba(239,68,68,0.2); }
   [data-theme="dark"] .btn-action-approve { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); }
   [data-theme="dark"] .btn-action-approve:hover { background: #334155; }
+  [data-theme="dark"] .btn-action-edit { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.2); color: #60a5fa; }
+  [data-theme="dark"] .btn-action-delete { background: transparent; border-color: rgba(239,68,68,0.2); color: #f87171; }
+  [data-theme="dark"] .status-label.approved { background: rgba(22,163,74,0.1); border-color: rgba(22,163,74,0.2); }
+  [data-theme="dark"] .status-label.rejected { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.2); }
+  [data-theme="dark"] .search-input, [data-theme="dark"] .filter-select { background: #1e293b; border-color: rgba(255,255,255,0.1); color: #e2e8f0; }
+  [data-theme="dark"] .edit-modal-body input, [data-theme="dark"] .edit-modal-body select, [data-theme="dark"] .edit-modal-body textarea { background: #0f172a; border-color: rgba(255,255,255,0.1); color: #e2e8f0; }
+  [data-theme="dark"] .edit-modal-body label { color: #94a3b8; }
   [data-theme="dark"] .modal-content { background: #1e293b; }
   [data-theme="dark"] .modal-header { border-bottom-color: rgba(255,255,255,0.06); }
   [data-theme="dark"] .modal-header h3 { color: #f1f5f9; }
