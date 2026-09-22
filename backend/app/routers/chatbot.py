@@ -6,7 +6,7 @@ from app.dependencies import get_current_user_optional, get_current_user
 from app.models.user import User
 from app.models.chat_message import ChatMessage
 from app.services.chatbot_service import (
-    detect_intent,
+    route_question,
     query_projects,
     query_stakeholders,
     query_analytics,
@@ -169,38 +169,41 @@ async def ask_chatbot(
     if not question:
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
-    intent = detect_intent(question)
-    intent_type = intent.get("intent")
+    # The LLM router classifies the question and extracts its parameters in
+    # one shot (see chatbot_service.route_question) — it also writes the
+    # reply itself for small talk / out-of-scope questions.
+    route = route_question(question)
+    action = route.get("action")
 
     # ── 1. Fetch relevant data from DB ──
     data = None
-    if intent_type == "search_projects":
+    if action == "search_projects":
         data = query_projects(
             db,
-            sector=intent.get("sector"),
-            technology=intent.get("technology"),
-            country=intent.get("country"),
-            sdg=intent.get("sdg"),
+            sector=route.get("sector"),
+            technology=route.get("technology"),
+            country=route.get("country"),
+            sdg=route.get("sdg"),
         )
-    elif intent_type == "search_stakeholders":
+    elif action == "search_stakeholders":
         data = query_stakeholders(
             db,
-            stakeholder_type=intent.get("type"),
-            country=intent.get("country"),
+            stakeholder_type=route.get("stakeholder_type"),
+            country=route.get("country"),
         )
-    elif intent_type == "analytics_query":
-        data = query_analytics(db, intent.get("subtype", "overview"))
-    elif intent_type == "semantic_search":
+    elif action == "analytics":
+        data = query_analytics(db, route.get("analytics_subtype") or "overview")
+    elif action == "semantic_search":
         data = query_semantic(db, question)
 
     # ── 2. Try Ollama with conversation history ──
-    # Small talk (greeting/thanks) is answered directly from the template:
-    # it needs no database context, and skipping Ollama guarantees the reply
-    # lands in the language actually detected from the greeting itself.
+    # Small talk / out-of-scope already got their final reply from the router
+    # itself (route["reply"]) — no need for (and no benefit from) a second
+    # Ollama call.
     answer = None
     source = "template"
-    if intent_type not in ("greeting", "thanks"):
-        context = format_results_for_prompt(intent_type, data)
+    if action not in ("small_talk", "out_of_scope"):
+        context = format_results_for_prompt(action, data)
         history_dicts = [{"role": m.role, "text": m.text} for m in req.history]
         answer = await call_ollama(question, context, history=history_dicts)
         if answer:
@@ -208,10 +211,10 @@ async def ask_chatbot(
 
     # ── 3. Fallback: template-based response (always works) ──
     if not answer:
-        answer = generate_template_response(intent_type, intent, data)
+        answer = generate_template_response(action, route, data)
 
     # ── 4. Follow-up suggestions ──
-    followups = get_followup_suggestions(intent_type, intent, data)
+    followups = get_followup_suggestions(action, route, data)
 
     # ── 5. Serialize data for the response ──
     raw = None
@@ -238,7 +241,7 @@ async def ask_chatbot(
             user_id=current_user.id,
             question=question,
             answer=answer,
-            intent_type=intent_type,
+            intent_type=action,
             source=source,
         ))
         db.commit()
@@ -247,6 +250,6 @@ async def ask_chatbot(
         answer=answer,
         data=raw,
         source=source,
-        intent_type=intent_type,
+        intent_type=action,
         followups=followups,
     )

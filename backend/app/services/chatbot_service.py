@@ -1,13 +1,14 @@
 import os
 import re
+import json
 import httpx
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from app.models.project import Project
 from app.models.stakeholder import Stakeholder
 from app.models.country import Country
-from app.services.embedding_service import EMBEDDING_ENABLED, generate_embedding, search_by_vector
-from app.services.query_parser import parse_query as parse_natural_language
+from app.services.embedding_service import generate_embedding, search_by_vector
+from app.services.ollama_service import ask_llm
 
 OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://localhost:11434")
 OLLAMA_MODEL   = os.getenv("OLLAMA_MODEL", "llama3.2")
@@ -22,67 +23,58 @@ SYSTEM_PROMPT = (
     "(French, English or Arabic) — never switch language on your own."
 )
 
-# ─── Aliases & Normalization ──────────────────────────────────────────────────
+# ─── LLM router ──────────────────────────────────────────────────────────────
+# The model itself decides what the user wants and extracts the parameters,
+# in one JSON call — instead of a hand-maintained cascade of keyword lists
+# that has to be patched for every new typo, phrasing or country someone
+# tries. This is the same "let the LLM understand, don't out-guess it with
+# regexes" approach as app.services.query_parser (used by /api/ai-search).
 
-COUNTRY_ALIASES = {
-    'tunisie': 'tunisia', 'maroc': 'morocco', 'algérie': 'algeria', 'algerie': 'algeria',
-    'egypte': 'egypt', 'égypte': 'egypt', 'libye': 'libya', 'soudan': 'sudan',
-    'mauritanie': 'mauritania', 'liban': 'lebanon', 'jordanie': 'jordan',
-    'syrie': 'syria', 'irak': 'iraq', 'yémen': 'yemen', 'yemen': 'yemen',
-    'emirats': 'uae', 'émirats': 'uae', 'emirats arabes unis': 'uae',
-    'arabie saoudite': 'saudi arabia', 'koweït': 'kuwait', 'koweit': 'kuwait',
-    'djibouti': 'djibouti', 'comores': 'comoros', 'somalie': 'somalia',
-    'palestine': 'palestine', 'bahreïn': 'bahrain', 'bahrain': 'bahrain',
-    'oman': 'oman', 'qatar': 'qatar',
-}
+ROUTER_SYSTEM_PROMPT = """You are the routing brain for SARAI, a platform that catalogs AI projects, stakeholders and resources across the 22 Arab League countries: Algeria, Bahrain, Comoros, Djibouti, Egypt, Iraq, Jordan, Kuwait, Lebanon, Libya, Mauritania, Morocco, Oman, Palestine, Qatar, Saudi Arabia, Somalia, Sudan, Syria, Tunisia, United Arab Emirates, Yemen.
 
-SECTOR_ALIASES = {
-    # French
-    'santé': 'health', 'éducation': 'education', 'education': 'education',
-    'agriculture': 'agriculture', 'finance': 'finance', 'transport': 'transportation',
-    'transports': 'transportation', 'énergie': 'energy', 'energie': 'energy',
-    'sécurité': 'security', 'securite': 'security', 'environnement': 'environment',
-    'villes intelligentes': 'smart cities', 'télécommunications': 'telecommunications',
-    # English
-    'health': 'health', 'education': 'education', 'fintech': 'finance',
-    'transportation': 'transportation', 'energy': 'energy', 'security': 'security',
-    'environment': 'environment', 'smart cities': 'smart cities', 'govtech': 'govtech',
-    'agritech': 'agriculture', 'climate': 'climate',
-    'entrepreneuriat': 'entrepreneuriat', 'entrepreneurship': 'entrepreneuriat',
-    'startup': 'entrepreneuriat', 'startups': 'entrepreneuriat', 'innovation': 'entrepreneuriat',
-}
+Read the user's message and decide which ONE action fits best, then reply with ONLY a single JSON object — no markdown, no explanation, no extra text.
 
-TECH_ALIASES = {
-    'nlp': 'nlp', 'natural language': 'nlp', 'traitement du langage': 'nlp',
-    'computer vision': 'computer vision', 'vision par ordinateur': 'computer vision',
-    'robotics': 'robotics', 'robotique': 'robotics',
-    'machine learning': 'machine learning', 'apprentissage automatique': 'machine learning',
-    'deep learning': 'deep learning', 'apprentissage profond': 'deep learning',
-    'predictive analytics': 'predictive analytics', 'analyse prédictive': 'predictive analytics',
-    'llm': 'llms', 'large language': 'llms', 'gpt': 'llms',
-    'speech recognition': 'speech recognition', 'reconnaissance vocale': 'speech recognition',
-}
+Fields to always include:
+- "action": one of "search_projects", "search_stakeholders", "analytics", "semantic_search", "small_talk", "out_of_scope"
+- "country": one of the 22 Arab League countries above, in English, or null. Recognize the country even if misspelled or written in French or Arabic (e.g. "marroc", "Maroc", "المغرب" all mean "Morocco").
+- "sector": a sector such as Health, Education, Agriculture, Finance, Energy, Transportation, Security, Smart Cities, Climate, GovTech, Telecommunications — or null.
+- "technology": an AI technology such as NLP, Computer Vision, Machine Learning, Deep Learning, LLMs, Robotics, Predictive Analytics — or null.
+- "sdg": a Sustainable Development Goal number (1-17) as a string, or null.
+- "stakeholder_type": one of "startup", "university", "ngo", "government", "company", "lab", or null.
+- "analytics_subtype": "overview", "most_active_country", or "most_active_sector" — only meaningful when action is "analytics", else null.
+- "lang": the language the user wrote in — "fr", "en", or "ar".
+- "reply": ONLY used when action is "small_talk" or "out_of_scope", else null.
+  - "small_talk": greetings, thanks, goodbyes, or anything unrelated to AI projects/stakeholders. Write a short, friendly reply yourself, in the user's language ("lang").
+  - "out_of_scope": the user names a real country or region that is NOT one of the 22 Arab League countries above (e.g. France, USA, China, Germany). Write a short, polite reply yourself, in the user's language, explaining SARAI only covers the Arab region.
 
-GREETING_WORDS = {
-    'fr': ['bonjour', 'bonsoir', 'salut', 'coucou'],
-    'en': ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening'],
-    'ar': ['مرحبا', 'أهلا', 'اهلا', 'السلام عليكم'],
-}
-THANKS_WORDS = {
-    'fr': ['merci'],
-    'en': ['thanks', 'thank you', 'thx'],
-    'ar': ['شكرا', 'شكراً'],
-}
+Use "search_projects"/"search_stakeholders" whenever a country/sector/technology/type is recognized. Use "semantic_search" when the question is clearly about AI initiatives but doesn't map to a specific filter (e.g. a thematic question like "projects fighting drought"). Use "analytics" for statistics questions.
 
-GREETING_REPLIES = {
-    'fr': "Bonjour ! 👋 Je suis l'assistant SARAI. Je peux vous aider à trouver des projets, des parties prenantes ou des statistiques sur l'écosystème d'IA de la région arabe. Que souhaitez-vous savoir ?",
-    'en': "Hello! 👋 I'm the SARAI assistant. I can help you find AI projects, stakeholders, or statistics across the Arab region. What would you like to know?",
-    'ar': "مرحباً! 👋 أنا مساعد SARAI. يمكنني مساعدتك في العثور على مشاريع الذكاء الاصطناعي والجهات المعنية والإحصائيات في المنطقة العربية. بماذا تود أن تبدأ؟",
-}
-THANKS_REPLIES = {
-    'fr': "Avec plaisir ! N'hésitez pas si vous avez d'autres questions sur SARAI.",
-    'en': "You're welcome! Feel free to ask if you have any other questions about SARAI.",
-    'ar': "على الرحب والسعة! لا تتردد في طرح أي سؤال آخر حول SARAI.",
+Examples:
+User: "bonjour"
+{"action": "small_talk", "country": null, "sector": null, "technology": null, "sdg": null, "stakeholder_type": null, "analytics_subtype": null, "lang": "fr", "reply": "Bonjour ! Je suis l'assistant SARAI. Je peux vous aider à trouver des projets, des parties prenantes ou des statistiques sur l'écosystème d'IA de la région arabe. Que souhaitez-vous savoir ?"}
+
+User: "donne moi les projet au marroc"
+{"action": "search_projects", "country": "Morocco", "sector": null, "technology": null, "sdg": null, "stakeholder_type": null, "analytics_subtype": null, "lang": "fr", "reply": null}
+
+User: "donne moi les projet en france"
+{"action": "out_of_scope", "country": null, "sector": null, "technology": null, "sdg": null, "stakeholder_type": null, "analytics_subtype": null, "lang": "fr", "reply": "SARAI ne couvre que les pays de la Ligue arabe. La France n'entre pas dans son périmètre actuel — essayez plutôt un pays comme le Maroc ou l'Égypte."}
+
+User: "which country has the most AI projects?"
+{"action": "analytics", "country": null, "sector": null, "technology": null, "sdg": null, "stakeholder_type": null, "analytics_subtype": "most_active_country", "lang": "en", "reply": null}
+
+User: "projects fighting drought"
+{"action": "semantic_search", "country": null, "sector": null, "technology": null, "sdg": null, "stakeholder_type": null, "analytics_subtype": null, "lang": "en", "reply": null}
+
+Respond with ONLY the JSON object."""
+
+# Last-resort safety net, used only when Ollama itself can't be reached at
+# all (so the router call above never returns anything to parse). Everything
+# else — typos, language, greetings, out-of-scope countries — is handled by
+# the LLM router, not by a hand-written list.
+_FALLBACK_GREETING_WORDS = ['bonjour', 'salut', 'hello', 'hi', 'hey', 'merci', 'thanks', 'مرحبا', 'شكرا']
+_FALLBACK_REPLIES = {
+    'fr': "Bonjour ! Je suis l'assistant SARAI, mais je ne peux pas traiter votre demande pour le moment (le modèle local est indisponible). Réessayez dans un instant.",
+    'en': "Hello! I'm the SARAI assistant, but I can't process your request right now (the local model is unavailable). Please try again shortly.",
 }
 FOLLOWUPS_BY_LANG = {
     'fr': ["Aperçu de la plateforme", "Pays le plus actif", "Principaux secteurs"],
@@ -91,134 +83,50 @@ FOLLOWUPS_BY_LANG = {
 }
 
 
-def _match_short_phrase(q: str, words_by_lang: dict, max_words: int = 6) -> str | None:
-    """Matches a whole word (not a substring — 'hey' must not match inside
-    'they') only when the message is short, so it doesn't misfire on longer
-    questions that happen to contain a greeting-like word."""
-    if len(q.split()) > max_words:
-        return None
-    for lang, words in words_by_lang.items():
-        for w in words:
-            if re.search(rf'\b{re.escape(w)}\b', q):
-                return lang
+def _extract_json(text: str) -> dict | None:
+    text = text.strip()
+    if text.startswith("```"):
+        for part in text.split("```"):
+            part = part.strip()
+            if part.startswith("{") and part.endswith("}"):
+                text = part
+                break
+            if part.lower().startswith("json"):
+                text = part[4:].strip()
+                break
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group())
+            except json.JSONDecodeError:
+                return None
     return None
 
 
-TYPE_ALIASES = {
-    'startup': ['startup', 'startups', 'start-up'],
-    'university': ['university', 'universities', 'université', 'universités'],
-    'ngo': ['ngo', 'ngos', 'non-profit', 'ong', 'association'],
-    'government': ['government', 'governmental', 'gouvernement', 'ministère', 'ministry', 'public sector'],
-    'company': ['company', 'companies', 'corporation', 'entreprise', 'société'],
-    'lab': ['lab', 'research lab', 'laboratory', 'laboratoire', 'research center', 'centre de recherche'],
-}
-
-
-def _normalize(q: str, aliases: dict) -> str | None:
-    for alias, canonical in sorted(aliases.items(), key=lambda x: -len(x[0])):
-        if alias in q:
-            return canonical
-    return None
-
-
-# ─── Intent Detection ────────────────────────────────────────────────────────
-
-def detect_intent(question: str) -> dict:
+def _fallback_route(question: str) -> dict:
+    """Only reached when Ollama is completely unreachable, so route_question's
+    own LLM call couldn't run. Degraded on purpose: no typo tolerance, no real
+    language detection — just enough to avoid crashing until Ollama is back."""
     q = question.lower().strip()
+    if len(q.split()) <= 5 and any(re.search(rf'\b{re.escape(w)}\b', q) for w in _FALLBACK_GREETING_WORDS):
+        return {'action': 'small_talk', 'lang': 'en', 'reply': _FALLBACK_REPLIES['en']}
+    return {
+        'action': 'search_projects', 'country': None, 'sector': None,
+        'technology': None, 'sdg': None, 'lang': 'en', 'reply': None,
+    }
 
-    # Small talk short-circuits everything else: a short greeting or thank-you
-    # must never be answered with platform statistics.
-    greeting_lang = _match_short_phrase(q, GREETING_WORDS)
-    if greeting_lang:
-        return {'intent': 'greeting', 'lang': greeting_lang}
-    thanks_lang = _match_short_phrase(q, THANKS_WORDS)
-    if thanks_lang:
-        return {'intent': 'thanks', 'lang': thanks_lang}
 
-    # Normalize country aliases
-    found_country = _normalize(q, COUNTRY_ALIASES)
-    if not found_country:
-        known = [
-            'tunisia', 'algeria', 'morocco', 'egypt', 'uae', 'saudi arabia',
-            'qatar', 'oman', 'bahrain', 'kuwait', 'lebanon', 'jordan', 'iraq',
-            'syria', 'palestine', 'yemen', 'libya', 'mauritania', 'sudan',
-            'djibouti', 'comoros', 'somalia',
-        ]
-        found_country = next((c for c in known if c in q), None)
-
-    found_sector = _normalize(q, SECTOR_ALIASES)
-    found_tech   = _normalize(q, TECH_ALIASES)
-    found_type   = next(
-        (k for k, v in TYPE_ALIASES.items() if any(x in q for x in v)), None
-    )
-
-    # SDG detection
-    sdg_match = re.search(r'sdg\s*(\d+)|objectif\s*(\d+)|goal\s*(\d+)', q)
-    sdg_num = None
-    if sdg_match:
-        sdg_num = next(g for g in sdg_match.groups() if g is not None)
-
-    # Analytics triggers
-    analytics_kw_country = ['most active country', 'top country', 'leading country', 'which country', 'pays le plus actif', 'quel pays']
-    analytics_kw_sector  = ['most projects', 'top sector', 'leading sector', 'which sector', 'secteur principal', 'quel secteur']
-    analytics_kw_overview = ['overview', 'summary', 'stats', 'statistics', 'how many', 'total', 'combien', 'résumé', 'aperçu', 'bilan']
-
-    if any(w in q for w in analytics_kw_country):
-        return {'intent': 'analytics_query', 'subtype': 'most_active_country'}
-    if any(w in q for w in analytics_kw_sector):
-        return {'intent': 'analytics_query', 'subtype': 'most_active_sector'}
-    if any(w in q for w in analytics_kw_overview):
-        return {'intent': 'analytics_query', 'subtype': 'overview'}
-
-    # SDG search
-    if sdg_num:
-        return {'intent': 'search_projects', 'sdg': sdg_num, 'sector': None, 'technology': None, 'country': found_country}
-
-    # Project triggers
-    if found_tech and found_country:
-        return {'intent': 'search_projects', 'sector': None, 'technology': found_tech, 'country': found_country, 'sdg': None}
-    if found_tech:
-        return {'intent': 'search_projects', 'sector': None, 'technology': found_tech, 'country': None, 'sdg': None}
-    if found_sector and found_country:
-        return {'intent': 'search_projects', 'sector': found_sector, 'technology': None, 'country': found_country, 'sdg': None}
-    if found_sector:
-        return {'intent': 'search_projects', 'sector': found_sector, 'technology': None, 'country': None, 'sdg': None}
-    if found_country and any(w in q for w in ['project', 'initiative', 'ai', 'program', 'projet', 'programme']):
-        return {'intent': 'search_projects', 'sector': None, 'technology': None, 'country': found_country, 'sdg': None}
-
-    # Stakeholder triggers
-    if found_type and found_country:
-        return {'intent': 'search_stakeholders', 'type': found_type, 'country': found_country}
-    if found_type:
-        return {'intent': 'search_stakeholders', 'type': found_type, 'country': None}
-    if found_country and any(w in q for w in ['stakeholder', 'actor', 'organization', 'organisation', 'partner', 'partenaire', 'acteur']):
-        return {'intent': 'search_stakeholders', 'type': None, 'country': found_country}
-    if found_country:
-        return {'intent': 'search_projects', 'sector': None, 'technology': None, 'country': found_country, 'sdg': None}
-
-    if any(w in q for w in ['project', 'initiative', 'program', 'projet', 'programme']):
-        return {'intent': 'search_projects', 'sector': None, 'technology': None, 'country': None, 'sdg': None}
-    if any(w in q for w in ['stakeholder', 'organization', 'organisation', 'actor', 'partner', 'partenaire', 'acteur']):
-        return {'intent': 'search_stakeholders', 'type': None, 'country': None}
-
-    # No keyword rule matched: ask the LLM to extract structured filters from
-    # the free-form question — the same parser used by GET /api/ai-search.
-    parsed = parse_natural_language(question)
-    p_country = parsed.get('country')
-    p_sector = parsed.get('sector')
-    p_tech = parsed.get('technology')
-    p_entity = parsed.get('entity')
-
-    if p_entity == 'stakeholder':
-        return {'intent': 'search_stakeholders', 'type': None, 'country': p_country}
-    if p_entity != 'resource' and (p_country or p_sector or p_tech):
-        return {'intent': 'search_projects', 'sector': p_sector, 'technology': p_tech, 'country': p_country, 'sdg': None}
-
-    # Still nothing usable: fall back to semantic (vector) search over the
-    # free-form question when it is available, instead of guessing "overview".
-    if EMBEDDING_ENABLED:
-        return {'intent': 'semantic_search'}
-    return {'intent': 'analytics_query', 'subtype': 'overview'}
+def route_question(question: str) -> dict:
+    """Single LLM call that classifies the question and extracts its
+    parameters in one shot — the LLM is the router, not a lookup table."""
+    raw = ask_llm(prompt=question.strip(), system_prompt=ROUTER_SYSTEM_PROMPT, format_json=True)
+    parsed = _extract_json(raw) if raw else None
+    if isinstance(parsed, dict) and parsed.get('action'):
+        return parsed
+    return _fallback_route(question)
 
 
 # ─── DB Queries ───────────────────────────────────────────────────────────────
@@ -320,14 +228,14 @@ def query_semantic(db: Session, question: str, limit: int = 6) -> list[dict]:
 
 # ─── Follow-up suggestion generator ─────────────────────────────────────────
 
-def get_followup_suggestions(intent_type: str, intent: dict, data) -> list[str]:
+def get_followup_suggestions(action: str, route: dict, data) -> list[str]:
     """Return 3 contextual follow-up suggestion chips."""
     suggestions = []
-    country = intent.get('country', '')
-    sector  = intent.get('sector', '')
-    tech    = intent.get('technology', '')
+    country = route.get('country') or ''
+    sector  = route.get('sector') or ''
+    tech    = route.get('technology') or ''
 
-    if intent_type == 'search_projects':
+    if action == 'search_projects':
         if country:
             suggestions.append(f"Show stakeholders in {country.title()}")
         if sector:
@@ -338,12 +246,12 @@ def get_followup_suggestions(intent_type: str, intent: dict, data) -> list[str]:
             suggestions = ["Show overview stats", "Most active country", "Top sectors"]
         suggestions.append("Platform overview")
 
-    elif intent_type == 'search_stakeholders':
+    elif action == 'search_stakeholders':
         if country:
             suggestions.append(f"AI projects in {country.title()}")
         suggestions += ["Show universities", "Government organizations", "Platform overview"]
 
-    elif intent_type == 'analytics_query':
+    elif action == 'analytics':
         suggestions = [
             "Show health sector projects",
             "Most active country",
@@ -351,27 +259,24 @@ def get_followup_suggestions(intent_type: str, intent: dict, data) -> list[str]:
             "Show startups in Morocco",
         ]
 
-    elif intent_type == 'semantic_search':
+    elif action == 'semantic_search':
         suggestions = ["Platform overview", "Most active country", "Top sectors"]
 
-    elif intent_type in ('greeting', 'thanks'):
-        suggestions = FOLLOWUPS_BY_LANG.get(intent.get('lang'), FOLLOWUPS_BY_LANG['en'])
+    elif action in ('small_talk', 'out_of_scope'):
+        suggestions = FOLLOWUPS_BY_LANG.get(route.get('lang'), FOLLOWUPS_BY_LANG['en'])
 
     return suggestions[:3]
 
 
 # ─── Template-based Response ─────────────────────────────────────────────────
 
-def generate_template_response(intent_type: str, intent: dict, data) -> str:
-    if intent_type == 'greeting':
-        return GREETING_REPLIES.get(intent.get('lang'), GREETING_REPLIES['en'])
+def generate_template_response(action: str, route: dict, data) -> str:
+    if action in ('small_talk', 'out_of_scope'):
+        return route.get('reply') or _FALLBACK_REPLIES.get(route.get('lang'), _FALLBACK_REPLIES['en'])
 
-    if intent_type == 'thanks':
-        return THANKS_REPLIES.get(intent.get('lang'), THANKS_REPLIES['en'])
-
-    if intent_type == 'search_projects':
+    if action == 'search_projects':
         if not data:
-            filters = [v for k, v in intent.items()
+            filters = [v for k, v in route.items()
                        if k in ('sector', 'technology', 'country', 'sdg') and v]
             desc = ", ".join(str(f) for f in filters) if filters else "your query"
             return f"No projects found for {desc}.\nTry broadening your search or check a different country or sector."
@@ -382,15 +287,15 @@ def generate_template_response(intent_type: str, intent: dict, data) -> str:
             meta = " · ".join(filter(None, [p.sector, p.ai_technology, country_name]))
             lines.append(f"• **{p.title}**" + (f"\n  {meta}" if meta else ""))
 
-        filters = [str(v).title() for k, v in intent.items()
+        filters = [str(v).title() for k, v in route.items()
                    if k in ('sector', 'technology', 'country') and v]
         header = f"Found **{len(data)}** AI project(s)"
         header += (f" — {', '.join(filters)}" if filters else "") + ":\n\n"
         return header + "\n".join(lines)
 
-    if intent_type == 'search_stakeholders':
+    if action == 'search_stakeholders':
         if not data:
-            filters = [v for k, v in intent.items() if k in ('type', 'country') and v]
+            filters = [v for k, v in route.items() if k in ('stakeholder_type', 'country') and v]
             desc = ", ".join(str(f) for f in filters) if filters else "your query"
             return f"No organizations found for {desc}.\nTry a different type or country."
 
@@ -402,8 +307,8 @@ def generate_template_response(intent_type: str, intent: dict, data) -> str:
         header = f"Found **{len(data)}** organization(s):\n\n"
         return header + "\n".join(lines)
 
-    if intent_type == 'analytics_query':
-        subtype = intent.get('subtype', 'overview')
+    if action == 'analytics':
+        subtype = route.get('analytics_subtype') or 'overview'
 
         if subtype == 'most_active_country':
             if not data:
@@ -429,7 +334,7 @@ def generate_template_response(intent_type: str, intent: dict, data) -> str:
                 f"• Top technologies: {techs}"
             )
 
-    if intent_type == 'semantic_search':
+    if action == 'semantic_search':
         if not data:
             return (
                 "I could not find anything closely related to your question. "
@@ -450,11 +355,11 @@ def generate_template_response(intent_type: str, intent: dict, data) -> str:
 
 # ─── Prompt formatter (for Ollama) ───────────────────────────────────────────
 
-def format_results_for_prompt(intent: str, data) -> str:
+def format_results_for_prompt(action: str, data) -> str:
     if not data or (isinstance(data, list) and not data):
         return "No matching records found in the database."
 
-    if intent == 'search_projects':
+    if action == 'search_projects':
         lines = []
         for p in data:
             desc = (p.description or '').strip()
@@ -467,7 +372,7 @@ def format_results_for_prompt(intent: str, data) -> str:
             )
         return f"{len(data)} project(s):\n" + "\n".join(lines)
 
-    if intent == 'search_stakeholders':
+    if action == 'search_stakeholders':
         lines = []
         for s in data:
             desc = (s.description or '').strip()
@@ -479,7 +384,7 @@ def format_results_for_prompt(intent: str, data) -> str:
             )
         return f"{len(data)} stakeholder(s):\n" + "\n".join(lines)
 
-    if intent == 'semantic_search':
+    if action == 'semantic_search':
         lines = []
         for r in data:
             etype = r.get('entity_type', 'item')
@@ -490,7 +395,7 @@ def format_results_for_prompt(intent: str, data) -> str:
             lines.append(f"- [{etype}] {name}" + (f" | About: {desc}" if desc else ""))
         return f"{len(data)} record(s) found by semantic search:\n" + "\n".join(lines)
 
-    if intent == 'analytics_query':
+    if action == 'analytics':
         if isinstance(data, list):
             if data and 'country' in data[0]:
                 return "Countries:\n" + "\n".join(f"{r['country']}: {r['project_count']}" for r in data)
