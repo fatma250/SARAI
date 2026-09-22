@@ -197,12 +197,12 @@ async def ask_chatbot(
         data = query_semantic(db, question)
 
     # ── 2. Try Ollama with conversation history ──
-    # Small talk / out-of-scope already got their final reply from the router
-    # itself (route["reply"]) — no need for (and no benefit from) a second
-    # Ollama call.
+    # Small talk / out-of-scope / general_info already got their final reply
+    # from the router itself (route["reply"]) — no need for (and no benefit
+    # from) a second Ollama call.
     answer = None
     source = "template"
-    if action not in ("small_talk", "out_of_scope"):
+    if action not in ("small_talk", "out_of_scope", "general_info"):
         context = format_results_for_prompt(action, data)
         history_dicts = [{"role": m.role, "text": m.text} for m in req.history]
         answer = await call_ollama(question, context, history=history_dicts)

@@ -35,7 +35,7 @@ ROUTER_SYSTEM_PROMPT = """You are the routing brain for SARAI, a platform that c
 Read the user's message and decide which ONE action fits best, then reply with ONLY a single JSON object — no markdown, no explanation, no extra text.
 
 Fields to always include:
-- "action": one of "search_projects", "search_stakeholders", "analytics", "semantic_search", "small_talk", "out_of_scope"
+- "action": one of "search_projects", "search_stakeholders", "analytics", "semantic_search", "small_talk", "out_of_scope", "general_info"
 - "country": one of the 22 Arab League countries above, in English, or null. Recognize the country even if misspelled or written in French or Arabic (e.g. "marroc", "Maroc", "المغرب" all mean "Morocco").
 - "sector": a sector such as Health, Education, Agriculture, Finance, Energy, Transportation, Security, Smart Cities, Climate, GovTech, Telecommunications — or null.
 - "technology": an AI technology such as NLP, Computer Vision, Machine Learning, Deep Learning, LLMs, Robotics, Predictive Analytics — or null.
@@ -43,11 +43,12 @@ Fields to always include:
 - "stakeholder_type": one of "startup", "university", "ngo", "government", "company", "lab", or null.
 - "analytics_subtype": "overview", "most_active_country", or "most_active_sector" — only meaningful when action is "analytics", else null.
 - "lang": the language the user wrote in — "fr", "en", or "ar".
-- "reply": ONLY used when action is "small_talk" or "out_of_scope", else null.
+- "reply": ONLY used when action is "small_talk", "out_of_scope" or "general_info", else null.
   - "small_talk": greetings, thanks, goodbyes, or anything unrelated to AI projects/stakeholders. Write a short, friendly reply yourself, in the user's language ("lang").
   - "out_of_scope": the user names a real country or region that is NOT one of the 22 Arab League countries above (e.g. France, USA, China, Germany). Write a short, polite reply yourself, in the user's language, explaining SARAI only covers the Arab region.
+  - "general_info": a real question about SARAI, AI, or a related topic (e.g. "how many SDGs are there?", "what is SARAI?", "what does NLP mean?") that does NOT require searching the live database of projects/stakeholders. Answer it yourself, honestly and briefly, in the user's language. If the question needs an exact figure from SARAI's live data that you don't have (e.g. "how many SDGs are currently covered by projects on the platform"), say plainly that you don't have that exact number rather than inventing one or naming unrelated projects.
 
-Use "search_projects"/"search_stakeholders" whenever a country/sector/technology/type is recognized. Use "semantic_search" when the question is clearly about AI initiatives but doesn't map to a specific filter (e.g. a thematic question like "projects fighting drought"). Use "analytics" for statistics questions.
+Use "search_projects"/"search_stakeholders" whenever a country/sector/technology/type is recognized. Use "semantic_search" when the question is clearly about AI initiatives but doesn't map to a specific filter (e.g. a thematic question like "projects fighting drought"). Use "analytics" for statistics questions about SARAI's own data (project/stakeholder counts, top countries/sectors). Use "general_info" for everything else that's still on-topic but isn't a database lookup — never invent a country or force it into search_projects/search_stakeholders/analytics just because none of them fit well.
 
 Examples:
 User: "bonjour"
@@ -64,6 +65,9 @@ User: "which country has the most AI projects?"
 
 User: "projects fighting drought"
 {"action": "semantic_search", "country": null, "sector": null, "technology": null, "sdg": null, "stakeholder_type": null, "analytics_subtype": null, "lang": "en", "reply": null}
+
+User: "combien d'ODD sont présents aujourd'hui ?"
+{"action": "general_info", "country": null, "sector": null, "technology": null, "sdg": null, "stakeholder_type": null, "analytics_subtype": null, "lang": "fr", "reply": "Il existe 17 Objectifs de Développement Durable (ODD) définis par l'ONU. Je n'ai pas accès en direct au nombre exact d'ODD actuellement couverts par les projets sur SARAI — consultez la section ODD de la plateforme pour ce chiffre précis."}
 
 Respond with ONLY the JSON object."""
 
@@ -262,7 +266,7 @@ def get_followup_suggestions(action: str, route: dict, data) -> list[str]:
     elif action == 'semantic_search':
         suggestions = ["Platform overview", "Most active country", "Top sectors"]
 
-    elif action in ('small_talk', 'out_of_scope'):
+    elif action in ('small_talk', 'out_of_scope', 'general_info'):
         suggestions = FOLLOWUPS_BY_LANG.get(route.get('lang'), FOLLOWUPS_BY_LANG['en'])
 
     return suggestions[:3]
@@ -271,7 +275,7 @@ def get_followup_suggestions(action: str, route: dict, data) -> list[str]:
 # ─── Template-based Response ─────────────────────────────────────────────────
 
 def generate_template_response(action: str, route: dict, data) -> str:
-    if action in ('small_talk', 'out_of_scope'):
+    if action in ('small_talk', 'out_of_scope', 'general_info'):
         return route.get('reply') or _FALLBACK_REPLIES.get(route.get('lang'), _FALLBACK_REPLIES['en'])
 
     if action == 'search_projects':
@@ -397,10 +401,16 @@ def format_results_for_prompt(action: str, data) -> str:
 
     if action == 'analytics':
         if isinstance(data, list):
+            # Spell out the rank explicitly (data is already sorted, highest
+            # count first) — an unlabeled list left a small local model to
+            # occasionally misidentify, or even contradict itself about,
+            # which entry is actually "most active".
             if data and 'country' in data[0]:
-                return "Countries:\n" + "\n".join(f"{r['country']}: {r['project_count']}" for r in data)
+                lines = [f"#{i+1} (rank {i+1} of {len(data)}): {r['country']} — {r['project_count']} project(s)" for i, r in enumerate(data)]
+                return "Countries ranked by number of AI projects, most active FIRST:\n" + "\n".join(lines)
             if data and 'sector' in data[0]:
-                return "Sectors:\n" + "\n".join(f"{r['sector']}: {r['project_count']}" for r in data)
+                lines = [f"#{i+1} (rank {i+1} of {len(data)}): {r['sector']} — {r['project_count']} project(s)" for i, r in enumerate(data)]
+                return "Sectors ranked by number of AI projects, most active FIRST:\n" + "\n".join(lines)
         if isinstance(data, dict):
             sectors = ", ".join(f"{s['sector']}({s['count']})" for s in data.get('top_sectors', []))
             return (
