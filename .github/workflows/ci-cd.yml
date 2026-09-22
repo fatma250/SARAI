@@ -176,3 +176,23 @@ jobs:
           done
           echo "Backend did not become healthy in time" >&2
           exit 1
+
+      - name: Ollama connectivity diagnostic (non-fatal)
+        # Informational only — never fails the deploy. Nobody on the team has
+        # shell access to this host, so this is the only way to see whether
+        # the backend container can actually reach Ollama: read this step's
+        # output in the Actions run log after every deploy.
+        if: always()
+        run: |
+          echo "--- Ollama on the host (127.0.0.1:11434) ---"
+          curl -fsS --max-time 5 http://localhost:11434/api/tags \
+            && echo "OK: Ollama answers on the host." \
+            || echo "FAIL: Ollama did not answer on the host itself — check 'systemctl status ollama'."
+
+          echo "--- Ollama from inside the backend container (host.docker.internal:11434) ---"
+          # curl isn't installed in the backend image — use Python (already
+          # the app's runtime) instead of adding a package just for this.
+          docker compose -f deploy/docker-compose.prod.yml exec -T backend \
+            python -c "import urllib.request; urllib.request.urlopen('http://host.docker.internal:11434/api/tags', timeout=5); print('reachable')" \
+            && echo "OK: backend container can reach Ollama." \
+            || echo "FAIL: backend container cannot reach Ollama — if the host check above succeeded, Ollama is likely bound to 127.0.0.1 only (needs OLLAMA_HOST=0.0.0.0 in its systemd config)."
