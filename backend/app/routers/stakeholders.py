@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.stakeholder import Stakeholder
 from app.models.country import Country
 from app.schemas.stakeholder import StakeholderCreate, StakeholderUpdate, StakeholderResponse
+from app.services.label_normalization import normalize_stakeholder_type
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,9 @@ def get_stakeholder(id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=StakeholderResponse)
 def create_stakeholder(stakeholder: StakeholderCreate, db: Session = Depends(get_db)):
-    db_stakeholder = Stakeholder(**stakeholder.model_dump())
+    data = stakeholder.model_dump()
+    data["type"] = normalize_stakeholder_type(data.get("type"))
+    db_stakeholder = Stakeholder(**data)
     db.add(db_stakeholder)
     db.commit()
     db.refresh(db_stakeholder)
@@ -73,6 +76,8 @@ def update_stakeholder(id: int, stakeholder: StakeholderUpdate, db: Session = De
         raise HTTPException(status_code=404, detail="Stakeholder not found")
     
     update_data = stakeholder.model_dump(exclude_unset=True)
+    if "type" in update_data:
+        update_data["type"] = normalize_stakeholder_type(update_data["type"])
     for field, value in update_data.items():
         setattr(db_stakeholder, field, value)
     

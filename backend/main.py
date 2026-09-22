@@ -31,6 +31,7 @@ from app.models.country import Country
 from app.models.notification import Notification
 from app.models.sdg import SDG
 from app.models.project_audit_log import ProjectAuditLog
+from app.models.chat_message import ChatMessage
 
 def _run_migrations():
     from sqlalchemy import text, inspect as sa_inspect
@@ -53,6 +54,42 @@ def _run_migrations():
             logger.info("[DB] Migration check done.")
     except Exception as e:
         logger.error(f"[DB] Migration error (non-fatal): {e}")
+
+    _normalize_taxonomy_labels()
+
+
+def _normalize_taxonomy_labels():
+    """
+    One-time (idempotent) cleanup of pre-existing duplicate taxonomy labels
+    caused by inconsistent casing/wording (e.g. "Health" vs "Healthcare").
+    New rows are normalized at write time in the projects/stakeholders
+    routers; this fixes rows created before that normalization existed.
+    """
+    from sqlalchemy import text
+    from app.services.label_normalization import (
+        SECTOR_ALIASES, TECHNOLOGY_ALIASES, STAKEHOLDER_TYPE_ALIASES,
+    )
+    try:
+        with engine.connect() as conn:
+            for alias, canonical in SECTOR_ALIASES.items():
+                conn.execute(
+                    text("UPDATE projects SET sector = :canonical WHERE lower(sector) = :alias"),
+                    {"canonical": canonical, "alias": alias},
+                )
+            for alias, canonical in TECHNOLOGY_ALIASES.items():
+                conn.execute(
+                    text("UPDATE projects SET ai_technology = :canonical WHERE lower(ai_technology) = :alias"),
+                    {"canonical": canonical, "alias": alias},
+                )
+            for alias, canonical in STAKEHOLDER_TYPE_ALIASES.items():
+                conn.execute(
+                    text("UPDATE stakeholders SET type = :canonical WHERE lower(type) = :alias"),
+                    {"canonical": canonical, "alias": alias},
+                )
+            conn.commit()
+        logger.info("[DB] Taxonomy label normalization done.")
+    except Exception as e:
+        logger.error(f"[DB] Taxonomy normalization error (non-fatal): {e}")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

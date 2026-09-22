@@ -1,0 +1,63 @@
+.stat-board {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 22px;
+}
+.stat-board-row {
+  display: grid;
+  grid-template-columns: 16px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--stat-gridline);
+}
+/* last row of each column shouldn't show a divider */
+.stat-board-row:last-child,
+.stat-board-row:nth-last-child(2) {
+  border-bottom: none;
+}
+.stat-board-rank {
+  font-size: 10px;
+  color: var(--stat-text-muted);
+  font-weight: 600;
+}
+.stat-board-mid {
+  min-width: 0;
+}
+.stat-board-name {
+  display: block;
+  font-size: 12px;
+  color: var(--stat-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 3px;
+}
+.stat-board-track {
+  display: block;
+  height: 6px;
+  background: var(--stat-surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.stat-board-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+.stat-board-val {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--stat-text-primary);
+}
+
+@media (max-width: 860px) {
+  .stat-board {
+    grid-template-columns: 1fr;
+  }
+  .stat-board-row:nth-last-child(2) {
+    border-bottom: 1px solid var(--stat-gridline);
+  }
+}

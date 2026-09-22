@@ -32,6 +32,9 @@ from app.models.notification import Notification
 # Resources
 from app.models.resource import Resource
 
+# Chatbot
+from app.models.chat_message import ChatMessage
+
 # Legacy (deprecated) - Removed
 
 __all__ = [
@@ -61,6 +64,8 @@ __all__ = [
     "Notification",
     # Resources
     "Resource",
+    # Chatbot
+    "ChatMessage",
     # Legacy
     "Stakeholder",
 ]

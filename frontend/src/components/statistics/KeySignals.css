@@ -1,0 +1,40 @@
+.stat-signals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat-signal {
+  background: var(--stat-surface-1);
+  border: 1px solid var(--stat-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: var(--stat-shadow);
+  display: flex;
+  gap: 11px;
+  align-items: flex-start;
+}
+.stat-signal-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex: none;
+}
+.stat-signal p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.48;
+  color: var(--stat-text-secondary);
+}
+.stat-signal p b,
+.stat-signal p strong {
+  color: var(--stat-text-primary);
+  font-weight: 600;
+}
+
+@media (max-width: 860px) {
+  .stat-signals {
+    grid-template-columns: 1fr;
+  }
+}

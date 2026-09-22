@@ -5,6 +5,8 @@ from sqlalchemy import func
 from app.models.project import Project
 from app.models.stakeholder import Stakeholder
 from app.models.country import Country
+from app.services.embedding_service import EMBEDDING_ENABLED, generate_embedding, search_by_vector
+from app.services.query_parser import parse_query as parse_natural_language
 
 OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://localhost:11434")
 OLLAMA_MODEL   = os.getenv("OLLAMA_MODEL", "llama3.2")
@@ -147,6 +149,23 @@ def detect_intent(question: str) -> dict:
     if any(w in q for w in ['stakeholder', 'organization', 'organisation', 'actor', 'partner', 'partenaire', 'acteur']):
         return {'intent': 'search_stakeholders', 'type': None, 'country': None}
 
+    # No keyword rule matched: ask the LLM to extract structured filters from
+    # the free-form question — the same parser used by GET /api/ai-search.
+    parsed = parse_natural_language(question)
+    p_country = parsed.get('country')
+    p_sector = parsed.get('sector')
+    p_tech = parsed.get('technology')
+    p_entity = parsed.get('entity')
+
+    if p_entity == 'stakeholder':
+        return {'intent': 'search_stakeholders', 'type': None, 'country': p_country}
+    if p_entity != 'resource' and (p_country or p_sector or p_tech):
+        return {'intent': 'search_projects', 'sector': p_sector, 'technology': p_tech, 'country': p_country, 'sdg': None}
+
+    # Still nothing usable: fall back to semantic (vector) search over the
+    # free-form question when it is available, instead of guessing "overview".
+    if EMBEDDING_ENABLED:
+        return {'intent': 'semantic_search'}
     return {'intent': 'analytics_query', 'subtype': 'overview'}
 
 
@@ -236,6 +255,17 @@ def query_analytics(db: Session, subtype: str):
     }
 
 
+def query_semantic(db: Session, question: str, limit: int = 6) -> list[dict]:
+    """RAG lookup: embeds the free-form question and retrieves the closest
+    projects/stakeholders/resources by cosine distance in pgvector. Returns
+    [] when semantic search is disabled, Ollama is unreachable, or pgvector
+    isn't available — the caller then falls back to the template response."""
+    emb = generate_embedding(question)
+    if not emb:
+        return []
+    return search_by_vector(db, emb, entity_type=None, limit=limit)
+
+
 # ─── Follow-up suggestion generator ─────────────────────────────────────────
 
 def get_followup_suggestions(intent_type: str, intent: dict, data) -> list[str]:
@@ -268,6 +298,9 @@ def get_followup_suggestions(intent_type: str, intent: dict, data) -> list[str]:
             "Find NLP projects",
             "Show startups in Morocco",
         ]
+
+    elif intent_type == 'semantic_search':
+        suggestions = ["Platform overview", "Most active country", "Top sectors"]
 
     return suggestions[:3]
 
@@ -335,6 +368,22 @@ def generate_template_response(intent_type: str, intent: dict, data) -> str:
                 f"• Top technologies: {techs}"
             )
 
+    if intent_type == 'semantic_search':
+        if not data:
+            return (
+                "I could not find anything closely related to your question. "
+                "Try rephrasing it, or ask about a specific country, sector or technology."
+            )
+        lines = []
+        for r in data:
+            etype = (r.get('entity_type') or 'item').capitalize()
+            name = r.get('title') or r.get('name') or 'Untitled'
+            desc = (r.get('description') or '').strip()
+            if len(desc) > 150:
+                desc = desc[:150].rsplit(' ', 1)[0] + "…"
+            lines.append(f"• **{name}** ({etype})" + (f"\n  {desc}" if desc else ""))
+        return "Here is what I found related to your question:\n\n" + "\n".join(lines)
+
     return "I could not find data for that query. Try asking about projects, sectors, countries, or organizations."
 
 
@@ -345,16 +394,40 @@ def format_results_for_prompt(intent: str, data) -> str:
         return "No matching records found in the database."
 
     if intent == 'search_projects':
-        lines = [
-            f"- {p.title} | Sector: {p.sector or 'N/A'} | Tech: {p.ai_technology or 'N/A'} | "
-            f"Country: {p.country.name if hasattr(p, 'country') and p.country else 'N/A'}"
-            for p in data
-        ]
+        lines = []
+        for p in data:
+            desc = (p.description or '').strip()
+            if len(desc) > 200:
+                desc = desc[:200].rsplit(' ', 1)[0] + "…"
+            lines.append(
+                f"- {p.title} | Sector: {p.sector or 'N/A'} | Tech: {p.ai_technology or 'N/A'} | "
+                f"Country: {p.country.name if hasattr(p, 'country') and p.country else 'N/A'}"
+                + (f" | About: {desc}" if desc else "")
+            )
         return f"{len(data)} project(s):\n" + "\n".join(lines)
 
     if intent == 'search_stakeholders':
-        lines = [f"- {s.name} | Type: {s.type} | Country: {s.country or 'N/A'}" for s in data]
+        lines = []
+        for s in data:
+            desc = (s.description or '').strip()
+            if len(desc) > 200:
+                desc = desc[:200].rsplit(' ', 1)[0] + "…"
+            lines.append(
+                f"- {s.name} | Type: {s.type} | Country: {s.country or 'N/A'}"
+                + (f" | About: {desc}" if desc else "")
+            )
         return f"{len(data)} stakeholder(s):\n" + "\n".join(lines)
+
+    if intent == 'semantic_search':
+        lines = []
+        for r in data:
+            etype = r.get('entity_type', 'item')
+            name = r.get('title') or r.get('name') or 'Untitled'
+            desc = (r.get('description') or '').strip()
+            if len(desc) > 200:
+                desc = desc[:200].rsplit(' ', 1)[0] + "…"
+            lines.append(f"- [{etype}] {name}" + (f" | About: {desc}" if desc else ""))
+        return f"{len(data)} record(s) found by semantic search:\n" + "\n".join(lines)
 
     if intent == 'analytics_query':
         if isinstance(data, list):
@@ -390,7 +463,7 @@ async def call_ollama(question: str, context: str, history: list[dict] | None = 
         f"Answer concisely:"
     )
     try:
-        async with httpx.AsyncClient(timeout=10) as client:
+        async with httpx.AsyncClient(timeout=45) as client:
             resp = await client.post(
                 f"{OLLAMA_API_URL}/api/generate",
                 json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},

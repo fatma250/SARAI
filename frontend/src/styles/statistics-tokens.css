@@ -1,0 +1,134 @@
+/*
+  Design tokens for the redesigned Statistics page.
+  Import this once (e.g. in Analytics.jsx or in your global index.css) and
+  use the CSS variables in your existing component styles instead of the
+  ad-hoc blue/purple gradients currently used per chart.
+
+  Dark mode: this file assumes your app toggles dark mode by putting a
+  data-theme="dark" attribute somewhere up the tree (ThemeContext.jsx already
+  does something like this based on the moon icon in the navbar). Adjust the
+  selector below (`[data-theme="dark"]`) if your ThemeContext uses a
+  different attribute or a class instead.
+*/
+
+:root {
+  --stat-page-bg: #eef1f8;
+  --stat-surface-1: #ffffff;
+  --stat-surface-2: #f6f7fb;
+  --stat-text-primary: #10131a;
+  --stat-text-secondary: #565b6b;
+  --stat-text-muted: #898781;
+  --stat-border: rgba(16, 19, 26, 0.08);
+  --stat-gridline: #e7e9f1;
+  --stat-baseline: #c3c2b7;
+
+  /* Categorical palette - fixed order, never cycle/reassign per filter */
+  --stat-series-1: #2a78d6; /* blue */
+  --stat-series-2: #eb6834; /* orange */
+  --stat-series-3: #1baf7a; /* aqua */
+  --stat-series-4: #eda100; /* yellow */
+  --stat-series-5: #e87ba4; /* magenta */
+  --stat-series-6: #008300; /* green */
+  --stat-series-other: #c3c2b7;
+
+  --stat-status-good: #0ca30c;
+  --stat-status-warning: #fab219;
+  --stat-success-text: #006300;
+
+  --stat-shadow: 0 1px 2px rgba(16, 19, 26, 0.04), 0 8px 24px -12px rgba(16, 19, 26, 0.12);
+}
+
+[data-theme="dark"] {
+  --stat-page-bg: #0c0d12;
+  --stat-surface-1: #16171f;
+  --stat-surface-2: #1c1e27;
+  --stat-text-primary: #ffffff;
+  --stat-text-secondary: #c3c2b7;
+  --stat-text-muted: #898781;
+  --stat-border: rgba(255, 255, 255, 0.1);
+  --stat-gridline: #2a2b33;
+  --stat-baseline: #383835;
+
+  --stat-series-1: #3987e5;
+  --stat-series-2: #d95926;
+  --stat-series-3: #199e70;
+  --stat-series-4: #c98500;
+  --stat-series-5: #d55181;
+  --stat-series-6: #1aa11a;
+  --stat-series-other: #45464f;
+
+  --stat-status-good: #0ca30c;
+  --stat-status-warning: #fab219;
+  --stat-success-text: #3fce3f;
+
+  --stat-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Shared layout primitives used by the components in this folder */
+
+.stat-page {
+  background: var(--stat-page-bg);
+  color: var(--stat-text-primary);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.stat-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.stat-span-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 860px) {
+  .stat-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .stat-span-2 {
+    grid-column: span 1;
+  }
+}
+
+.stat-card {
+  background: var(--stat-surface-1);
+  border: 1px solid var(--stat-border);
+  border-radius: 14px;
+  padding: 18px 20px 20px;
+  box-shadow: var(--stat-shadow);
+}
+
+.stat-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.stat-card-title {
+  font-family: "Outfit", sans-serif;
+  font-weight: 600;
+  font-size: 14.5px;
+  margin: 0;
+}
+
+.stat-card-sub {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--stat-text-muted);
+}
+
+.stat-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--stat-text-secondary);
+  background: var(--stat-surface-2);
+  border: 1px solid var(--stat-border);
+  border-radius: 999px;
+  padding: 3.5px 9px;
+  white-space: nowrap;
+}

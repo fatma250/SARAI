@@ -180,9 +180,11 @@ function CountryPage() {
                     <div className="card-mid">
                       <span className="sector-text">{project.sector}</span>
                       <h3>{project.title}</h3>
-                      <p className="project-dates">
-                        {formatDate(project.start_date)} — {formatDate(project.end_date)}
-                      </p>
+                      {project.start_date && (
+                        <p className="project-dates">
+                          {formatDate(project.start_date)} — {formatDate(project.end_date)}
+                        </p>
+                      )}
                       <p className="project-desc">{project.description}</p>
                     </div>
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, File, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, or_
@@ -23,6 +23,8 @@ from app.models.country import Country
 from app.models.user import User
 from app.dependencies import get_current_user, get_current_user_optional, require_admin
 from app.services.email_service import send_admin_new_project_alert
+from app.services.embedding_service import EMBEDDING_ENABLED, embed_and_store
+from app.services.label_normalization import normalize_sector, normalize_technology
 
 logger = logging.getLogger(__name__)
 
@@ -230,6 +232,7 @@ def check_duplicate_project(
 @router.post("/submit", response_model=ProjectResponse)
 def submit_project(
     project: ProjectCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -237,11 +240,15 @@ def submit_project(
     project_data["user_id"] = current_user.id  # ignore client-supplied user_id, trust the token
     project_data["status"] = "pending"
     project_data["submitted_at"] = datetime.now(timezone.utc)
+    project_data["sector"] = normalize_sector(project_data.get("sector"))
+    project_data["ai_technology"] = normalize_technology(project_data.get("ai_technology"))
     db_project = Project(**project_data)
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
     send_admin_new_project_alert(db_project.title, current_user.organization_name or "User", db_project.id)
+    if EMBEDDING_ENABLED:
+        background_tasks.add_task(embed_and_store, "project", db_project.id)
     return db_project
 
 
@@ -307,16 +314,22 @@ def get_project(
 @router.post("/", response_model=ProjectResponse)
 def create_project(
     project: ProjectCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     project_data = project.model_dump()
     project_data["user_id"] = current_user.id  # ignore client-supplied user_id, trust the token
+    project_data["status"] = "pending"  # every new project must go through moderation, no exceptions
+    project_data["sector"] = normalize_sector(project_data.get("sector"))
+    project_data["ai_technology"] = normalize_technology(project_data.get("ai_technology"))
     db_project = Project(**project_data)
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
     send_admin_new_project_alert(db_project.title, current_user.organization_name or "User", db_project.id)
+    if EMBEDDING_ENABLED:
+        background_tasks.add_task(embed_and_store, "project", db_project.id)
     return db_project
 
 
@@ -324,6 +337,7 @@ def create_project(
 def update_project(
     id: int,
     project: ProjectUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -336,6 +350,10 @@ def update_project(
         raise HTTPException(status_code=403, detail="You can only edit your own projects")
 
     update_data = project.model_dump(exclude_unset=True)
+    if "sector" in update_data:
+        update_data["sector"] = normalize_sector(update_data["sector"])
+    if "ai_technology" in update_data:
+        update_data["ai_technology"] = normalize_technology(update_data["ai_technology"])
     if not is_admin:
         # Owners can edit their project's content, but approval status is admin-only
         # (use /api/admin/projects/{id}/approve or /reject for that workflow).
@@ -361,6 +379,11 @@ def update_project(
 
     db.commit()
     db.refresh(db_project)
+
+    _EMBEDDED_FIELDS = {"title", "description", "sector", "ai_technology"}
+    if EMBEDDING_ENABLED and _EMBEDDED_FIELDS.intersection(changed_fields):
+        background_tasks.add_task(embed_and_store, "project", db_project.id)
+
     return db_project
 
 

@@ -52,6 +52,7 @@ class User(Base):
     projects = relationship("Project", back_populates="owner", cascade="all, delete-orphan", foreign_keys="[Project.user_id]")
     comments = relationship("Comment", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    chat_messages = relationship("ChatMessage", back_populates="user", cascade="all, delete-orphan")
 
     __table_args__ = (
         CheckConstraint(

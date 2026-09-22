@@ -1,0 +1,52 @@
+.stat-rank-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.stat-rank-row {
+  display: grid;
+  grid-template-columns: 20px 150px 1fr 30px;
+  align-items: center;
+  gap: 9px;
+}
+.stat-rank-num {
+  font-size: 11px;
+  color: var(--stat-text-muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.stat-rank-name {
+  font-size: 12.5px;
+  color: var(--stat-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stat-rank-track {
+  height: 9px;
+  background: var(--stat-surface-2);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.stat-rank-fill {
+  height: 100%;
+  border-radius: 5px;
+}
+.stat-rank-val {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--stat-text-primary);
+}
+.stat-rank-note {
+  margin-top: 9px;
+  font-size: 11px;
+  color: var(--stat-text-muted);
+}
+
+@media (max-width: 520px) {
+  .stat-rank-row {
+    grid-template-columns: 18px 100px 1fr 28px;
+  }
+}

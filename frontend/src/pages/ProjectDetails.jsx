@@ -155,9 +155,11 @@ function ProjectDetails() {
             <div className="meta-item">
               <FaGlobeAmericas /> <span>{project.country_name || 'Regional'}</span>
             </div>
-            <div className="meta-item">
-              <FaCalendarAlt /> <span>{formatDate(project.start_date)} — {formatDate(project.end_date)}</span>
-            </div>
+            {project.start_date && (
+              <div className="meta-item">
+                <FaCalendarAlt /> <span>{formatDate(project.start_date)} — {formatDate(project.end_date)}</span>
+              </div>
+            )}
             <div className="meta-item">
               <FaMicrochip /> <span>{project.ai_technology}</span>
             </div>

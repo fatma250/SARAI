@@ -2,11 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
+from app.dependencies import get_current_user_optional, get_current_user
+from app.models.user import User
+from app.models.chat_message import ChatMessage
 from app.services.chatbot_service import (
     detect_intent,
     query_projects,
     query_stakeholders,
     query_analytics,
+    query_semantic,
     format_results_for_prompt,
     generate_template_response,
     get_followup_suggestions,
@@ -110,8 +114,57 @@ class ChatbotResponse(BaseModel):
     followups: list[str] = []
 
 
+class HistoryItem(BaseModel):
+    id: int
+    question: str
+    answer: str
+    intent_type: str | None = None
+    source: str | None = None
+    created_at: str
+
+
+@router.get("/history", response_model=list[HistoryItem])
+def get_chat_history(
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    rows = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.user_id == current_user.id)
+        .order_by(ChatMessage.created_at.asc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        HistoryItem(
+            id=r.id,
+            question=r.question,
+            answer=r.answer,
+            intent_type=r.intent_type,
+            source=r.source,
+            created_at=r.created_at.isoformat(),
+        )
+        for r in rows
+    ]
+
+
+@router.delete("/history")
+def clear_chat_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    db.query(ChatMessage).filter(ChatMessage.user_id == current_user.id).delete()
+    db.commit()
+    return {"message": "History cleared"}
+
+
 @router.post("/ask", response_model=ChatbotResponse)
-async def ask_chatbot(req: ChatbotRequest, db: Session = Depends(get_db)):
+async def ask_chatbot(
+    req: ChatbotRequest,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional),
+):
     question = req.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
@@ -137,6 +190,8 @@ async def ask_chatbot(req: ChatbotRequest, db: Session = Depends(get_db)):
         )
     elif intent_type == "analytics_query":
         data = query_analytics(db, intent.get("subtype", "overview"))
+    elif intent_type == "semantic_search":
+        data = query_semantic(db, question)
 
     # ── 2. Try Ollama with conversation history ──
     answer = None
@@ -172,6 +227,17 @@ async def ask_chatbot(req: ChatbotRequest, db: Session = Depends(get_db)):
                     raw.append(d)
         else:
             raw = data
+
+    # ── 6. Persist the exchange for logged-in users ──
+    if current_user is not None:
+        db.add(ChatMessage(
+            user_id=current_user.id,
+            question=question,
+            answer=answer,
+            intent_type=intent_type,
+            source=source,
+        ))
+        db.commit()
 
     return ChatbotResponse(
         answer=answer,

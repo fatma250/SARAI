@@ -1276,9 +1276,11 @@ function ProjectStocktaking() {
                         <div className="card-mid">
                           <span className="sector-text">{p.sector}</span>
                           <h3>{p.title}</h3>
-                          <p className="project-dates">
-                            {formatDate(p.start_date)} — {formatDate(p.end_date)}
-                          </p>
+                          {p.start_date && (
+                            <p className="project-dates">
+                              {formatDate(p.start_date)} — {formatDate(p.end_date)}
+                            </p>
+                          )}
                           <p className="country-tag">{countryName} · {region}</p>
                         </div>
 

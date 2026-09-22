@@ -4,12 +4,19 @@ Vector column factory for pgvector with SQLite fallback.
 from sqlalchemy import Text, JSON
 from app.database import using_postgresql
 
-VECTOR_DIMENSION = 768
+VECTOR_DIMENSION = 768  # must match the embedding model in app.services.embedding_service
 
 
 def VectorColumn(*args, **kwargs):
+    """Real pgvector column under PostgreSQL (enables HNSW/IVFFlat indexing and
+    in-database cosine search); falls back to JSON/Text where pgvector isn't
+    available so the app keeps running (dev on SQLite, or the extension missing)."""
     if using_postgresql:
-        return JSON()
+        try:
+            from pgvector.sqlalchemy import Vector
+            return Vector(VECTOR_DIMENSION)
+        except ImportError:
+            return JSON()
     return Text()
 
 

@@ -13,7 +13,7 @@ from app.services.elasticsearch_service import (
     ELASTICSEARCH_ENABLED
 )
 from app.services.embedding_service import (
-    generate_embedding, search_vector, EMBEDDING_ENABLED
+    generate_embedding, search_by_vector, EMBEDDING_ENABLED
 )
 
 logger = logging.getLogger(__name__)
@@ -278,7 +278,11 @@ def hybrid_search(
         try:
             query_embedding = generate_embedding(query)
             if query_embedding:
-                embedding_results = search_vector(query_embedding, top_k=page_size)
+                embedding_results = search_by_vector(
+                    db, query_embedding,
+                    entity_type=entity_type or combined_filters.get("entity_type"),
+                    limit=page_size,
+                )
         except Exception as e:
             logger.error(f"Embedding search error: {e}")
 
@@ -297,6 +301,12 @@ def hybrid_search(
     merged = []
 
     for r in es_results:
+        key = (r.get("entity_type"), r.get("id"))
+        if key not in seen_ids:
+            seen_ids.add(key)
+            merged.append(r)
+
+    for r in embedding_results:
         key = (r.get("entity_type"), r.get("id"))
         if key not in seen_ids:
             seen_ids.add(key)

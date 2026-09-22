@@ -15,10 +15,7 @@ from app.services.elasticsearch_service import (
     INDEX_PROJECTS, INDEX_STAKEHOLDERS, INDEX_RESOURCES,
     ELASTICSEARCH_ENABLED
 )
-from app.services.embedding_service import (
-    generate_embedding, store_embedding, clear_vector_store,
-    EMBEDDING_ENABLED
-)
+from app.services.embedding_service import EMBEDDING_ENABLED, count_indexed
 from app.models.project import Project
 from app.models.stakeholder import Stakeholder
 from app.models.resource import Resource
@@ -141,10 +138,18 @@ def parse_search_query(q: str = Query("", description="Natural language query"))
 
 @router.post("/api/search/sync")
 def sync_search_index(db: Session = Depends(get_db)):
-    if not ELASTICSEARCH_ENABLED and not EMBEDDING_ENABLED:
-        create_indices()
+    """
+    Rebuilds the Elasticsearch full-text index.
 
-    clear_vector_store()
+    Semantic (pgvector) embeddings are NOT touched here: they're maintained
+    automatically as rows are created/edited (see app.services.embedding_service
+    .embed_and_store, wired into the projects/stakeholders/resources routers).
+    To backfill embeddings for rows that predate that wiring, or after
+    changing EMBEDDING_MODEL, run the offline script instead:
+        python -m scripts.generate_embeddings [--rebuild]
+    """
+    if not ELASTICSEARCH_ENABLED:
+        create_indices()
 
     projects = db.query(Project).filter(
         Project.status.notin_(["pending", "rejected"])
@@ -178,14 +183,6 @@ def sync_search_index(db: Session = Depends(get_db)):
         }
         project_docs.append(doc)
 
-        if EMBEDDING_ENABLED:
-            text = f"{p.title} {p.description or ''} {p.sector or ''} {p.ai_technology or ''}"
-            emb = generate_embedding(text)
-            if emb:
-                store_embedding("project", p.id, emb, {
-                    "title": p.title, "country": country_name, "sector": p.sector
-                })
-
     stakeholders = db.query(Stakeholder).all()
     stakeholder_docs = []
     for s in stakeholders:
@@ -205,14 +202,6 @@ def sync_search_index(db: Session = Depends(get_db)):
             "suggest": {"input": [s.name] + ([s.type] if s.type else [])}
         }
         stakeholder_docs.append(doc)
-
-        if EMBEDDING_ENABLED:
-            text = f"{s.name} {s.description or ''} {s.type or ''}"
-            emb = generate_embedding(text)
-            if emb:
-                store_embedding("stakeholder", s.id, emb, {
-                    "title": s.name, "country": s.country, "type": s.type
-                })
 
     resources = db.query(Resource).all()
     resource_docs = []
@@ -236,25 +225,12 @@ def sync_search_index(db: Session = Depends(get_db)):
         }
         resource_docs.append(doc)
 
-        if EMBEDDING_ENABLED:
-            text = f"{r.title} {r.description or ''} {r.type or ''} {r.category or ''}"
-            emb = generate_embedding(text)
-            if emb:
-                store_embedding("resource", r.id, emb, {
-                    "title": r.title, "type": r.type, "category": r.category
-                })
-
     es_results = {"projects": 0, "stakeholders": 0, "resources": 0}
-    embedding_count = 0
 
     if ELASTICSEARCH_ENABLED:
         es_results["projects"] = bulk_index(INDEX_PROJECTS, project_docs) or 0
         es_results["stakeholders"] = bulk_index(INDEX_STAKEHOLDERS, stakeholder_docs) or 0
         es_results["resources"] = bulk_index(INDEX_RESOURCES, resource_docs) or 0
-
-    if EMBEDDING_ENABLED:
-        from app.services.embedding_service import VECTOR_STORE as es_vector_store
-        embedding_count = len(es_vector_store)
 
     return {
         "message": "Search index synced successfully",
@@ -263,6 +239,6 @@ def sync_search_index(db: Session = Depends(get_db)):
             "stakeholders": len(stakeholder_docs),
             "resources": len(resource_docs),
             "elasticsearch": es_results,
-            "embeddings": embedding_count
+            "embeddings": count_indexed() if EMBEDDING_ENABLED else {"projects": 0, "stakeholders": 0, "resources": 0},
         }
     }

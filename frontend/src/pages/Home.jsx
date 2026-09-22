@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { 
   FaBrain, FaBuilding, FaProjectDiagram, FaGlobeAmericas, 
   FaBook, FaChartLine, FaArrowRight, FaRocket, FaSearch,
-  FaLightbulb, FaShieldAlt, FaNetworkWired, FaUsers, FaDatabase
+  FaLightbulb, FaShieldAlt, FaNetworkWired, FaUsers
 } from 'react-icons/fa'
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -43,7 +43,7 @@ function Home() {
     total_projects: '112',
     total_stakeholders: '90',
     total_countries_active: '22',
-    data_nodes: '5.2K'
+    ongoing_projects_count: '95'
   })
 
   useEffect(() => {
@@ -61,7 +61,7 @@ function Home() {
             total_projects: data.total_projects,
             total_stakeholders: data.total_stakeholders,
             total_countries_active: data.total_countries_active,
-            data_nodes: '5.2K'
+            ongoing_projects_count: data.ongoing_projects_count
           })
         }
       })
@@ -149,7 +149,7 @@ function Home() {
               { label: 'Organizations', value: `${stats.total_stakeholders}`, icon: <FaBuilding /> },
               { label: 'Active Projects', value: `${stats.total_projects}`, icon: <FaProjectDiagram /> },
               { label: 'Arab Nations', value: `${stats.total_countries_active}`, icon: <FaGlobeAmericas /> },
-              { label: 'Data Nodes', value: `${stats.data_nodes}`, icon: <FaDatabase /> }
+              { label: 'Ongoing Projects', value: `${stats.ongoing_projects_count}`, icon: <FaRocket /> }
             ].map((stat, i) => (
               <div key={i} className="stat-card">
                 <div className="stat-icon">{stat.icon}</div>
@@ -258,7 +258,7 @@ function Home() {
           {user ? (
             <div className="cta-box">
               <div className="cta-text">
-                <h2>{t('home.welcomeBackTitle', { name: user.organization_name })}</h2>
+                <h2>{t('home.welcomeBackTitle', { name: user.organization_name || user.email })}</h2>
                 <p>{t('home.welcomeBackDesc')}</p>
               </div>
               <div className="cta-actions">

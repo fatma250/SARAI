@@ -4,6 +4,8 @@ import { FaRobot, FaTimes, FaPaperPlane, FaSpinner, FaCopy, FaCheck, FaTrashAlt,
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const MAX_CHARS = 500
 
+const getToken = () => localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
+
 const INITIAL_SUGGESTIONS = [
   'Give me an overview of SARAI',
   'Show AI projects in Tunisia',
@@ -121,29 +123,62 @@ function renderMarkdown(text) {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
+const WELCOME_MESSAGE = {
+  id: 0,
+  role: 'bot',
+  text: "Hi! I'm **SARAI**, your AI assistant for the Arab AI Repository.\n\nAsk me about projects, organizations, sectors, countries or statistics across 22 Arab nations.",
+  time: new Date(),
+  data: null,
+  intent_type: null,
+  followups: [],
+}
+
 function Chatbot() {
   const [open, setOpen] = useState(false)
-  const [messages, setMessages] = useState([
-    {
-      id: 0,
-      role: 'bot',
-      text: "Hi! I'm **SARAI**, your AI assistant for the Arab AI Repository.\n\nAsk me about projects, organizations, sectors, countries or statistics across 22 Arab nations.",
-      time: new Date(),
-      data: null,
-      intent_type: null,
-      followups: [],
-    },
-  ])
+  const [messages, setMessages] = useState([WELCOME_MESSAGE])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [unread, setUnread] = useState(0)
   const [copied, setCopied] = useState(null)
   const [showScrollBtn, setShowScrollBtn] = useState(false)
   const [cleared, setCleared] = useState(false)
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   const chatEnd   = useRef(null)
   const bodyRef   = useRef(null)
   const inputRef  = useRef(null)
   const msgIdRef  = useRef(1)
+
+  // Load this user's previous questions once, the first time they open the chat
+  useEffect(() => {
+    if (!open || historyLoaded) return
+    setHistoryLoaded(true)
+    const token = getToken()
+    if (!token) return
+
+    fetch(`${API_BASE}/chatbot/history`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => (res.ok ? res.json() : []))
+      .then(rows => {
+        if (!Array.isArray(rows) || rows.length === 0) return
+        const restored = [WELCOME_MESSAGE]
+        for (const row of rows) {
+          const time = new Date(row.created_at)
+          restored.push({ id: msgIdRef.current++, role: 'user', text: row.question, time })
+          restored.push({
+            id: msgIdRef.current++,
+            role: 'bot',
+            text: row.answer,
+            time,
+            data: null,
+            intent_type: row.intent_type,
+            followups: [],
+          })
+        }
+        setMessages(restored)
+      })
+      .catch(() => {})
+  }, [open, historyLoaded])
 
   // Scroll to bottom
   const scrollToBottom = useCallback(() => {
@@ -203,6 +238,14 @@ function Chatbot() {
     setUnread(0)
     setCleared(true)
     setTimeout(() => setCleared(false), 1500)
+
+    const token = getToken()
+    if (token) {
+      fetch(`${API_BASE}/chatbot/history`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {})
+    }
   }
 
   const sendMessage = async (text) => {
@@ -218,9 +261,13 @@ function Chatbot() {
     const history = messages.slice(-10).map(m => ({ role: m.role === 'bot' ? 'bot' : 'user', text: m.text }))
 
     try {
+      const token = getToken()
+      const headers = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
+
       const res = await fetch(`${API_BASE}/chatbot/ask`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ question: q, history }),
       })
       if (!res.ok) throw new Error('Request failed')
