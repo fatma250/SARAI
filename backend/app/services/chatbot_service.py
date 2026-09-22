@@ -1,4 +1,5 @@
 import os
+import re
 import httpx
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
@@ -16,7 +17,9 @@ SYSTEM_PROMPT = (
     "AI projects, stakeholders, and initiatives across 22 Arab nations. "
     "Answer clearly and concisely using the provided database results. "
     "Use bullet points for lists. Be friendly, professional and brief (max 5 sentences). "
-    "If no results exist, say so politely and suggest alternative queries."
+    "If no results exist, say so politely and suggest alternative queries. "
+    "Always reply in the same language the user used in their question "
+    "(French, English or Arabic) — never switch language on your own."
 )
 
 # ─── Aliases & Normalization ──────────────────────────────────────────────────
@@ -60,6 +63,47 @@ TECH_ALIASES = {
     'speech recognition': 'speech recognition', 'reconnaissance vocale': 'speech recognition',
 }
 
+GREETING_WORDS = {
+    'fr': ['bonjour', 'bonsoir', 'salut', 'coucou'],
+    'en': ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening'],
+    'ar': ['مرحبا', 'أهلا', 'اهلا', 'السلام عليكم'],
+}
+THANKS_WORDS = {
+    'fr': ['merci'],
+    'en': ['thanks', 'thank you', 'thx'],
+    'ar': ['شكرا', 'شكراً'],
+}
+
+GREETING_REPLIES = {
+    'fr': "Bonjour ! 👋 Je suis l'assistant SARAI. Je peux vous aider à trouver des projets, des parties prenantes ou des statistiques sur l'écosystème d'IA de la région arabe. Que souhaitez-vous savoir ?",
+    'en': "Hello! 👋 I'm the SARAI assistant. I can help you find AI projects, stakeholders, or statistics across the Arab region. What would you like to know?",
+    'ar': "مرحباً! 👋 أنا مساعد SARAI. يمكنني مساعدتك في العثور على مشاريع الذكاء الاصطناعي والجهات المعنية والإحصائيات في المنطقة العربية. بماذا تود أن تبدأ؟",
+}
+THANKS_REPLIES = {
+    'fr': "Avec plaisir ! N'hésitez pas si vous avez d'autres questions sur SARAI.",
+    'en': "You're welcome! Feel free to ask if you have any other questions about SARAI.",
+    'ar': "على الرحب والسعة! لا تتردد في طرح أي سؤال آخر حول SARAI.",
+}
+FOLLOWUPS_BY_LANG = {
+    'fr': ["Aperçu de la plateforme", "Pays le plus actif", "Principaux secteurs"],
+    'en': ["Platform overview", "Most active country", "Top sectors"],
+    'ar': ["نظرة عامة على المنصة", "الدولة الأكثر نشاطاً", "أهم القطاعات"],
+}
+
+
+def _match_short_phrase(q: str, words_by_lang: dict, max_words: int = 6) -> str | None:
+    """Matches a whole word (not a substring — 'hey' must not match inside
+    'they') only when the message is short, so it doesn't misfire on longer
+    questions that happen to contain a greeting-like word."""
+    if len(q.split()) > max_words:
+        return None
+    for lang, words in words_by_lang.items():
+        for w in words:
+            if re.search(rf'\b{re.escape(w)}\b', q):
+                return lang
+    return None
+
+
 TYPE_ALIASES = {
     'startup': ['startup', 'startups', 'start-up'],
     'university': ['university', 'universities', 'université', 'universités'],
@@ -82,6 +126,15 @@ def _normalize(q: str, aliases: dict) -> str | None:
 def detect_intent(question: str) -> dict:
     q = question.lower().strip()
 
+    # Small talk short-circuits everything else: a short greeting or thank-you
+    # must never be answered with platform statistics.
+    greeting_lang = _match_short_phrase(q, GREETING_WORDS)
+    if greeting_lang:
+        return {'intent': 'greeting', 'lang': greeting_lang}
+    thanks_lang = _match_short_phrase(q, THANKS_WORDS)
+    if thanks_lang:
+        return {'intent': 'thanks', 'lang': thanks_lang}
+
     # Normalize country aliases
     found_country = _normalize(q, COUNTRY_ALIASES)
     if not found_country:
@@ -100,7 +153,6 @@ def detect_intent(question: str) -> dict:
     )
 
     # SDG detection
-    import re
     sdg_match = re.search(r'sdg\s*(\d+)|objectif\s*(\d+)|goal\s*(\d+)', q)
     sdg_num = None
     if sdg_match:
@@ -302,12 +354,21 @@ def get_followup_suggestions(intent_type: str, intent: dict, data) -> list[str]:
     elif intent_type == 'semantic_search':
         suggestions = ["Platform overview", "Most active country", "Top sectors"]
 
+    elif intent_type in ('greeting', 'thanks'):
+        suggestions = FOLLOWUPS_BY_LANG.get(intent.get('lang'), FOLLOWUPS_BY_LANG['en'])
+
     return suggestions[:3]
 
 
 # ─── Template-based Response ─────────────────────────────────────────────────
 
 def generate_template_response(intent_type: str, intent: dict, data) -> str:
+    if intent_type == 'greeting':
+        return GREETING_REPLIES.get(intent.get('lang'), GREETING_REPLIES['en'])
+
+    if intent_type == 'thanks':
+        return THANKS_REPLIES.get(intent.get('lang'), THANKS_REPLIES['en'])
+
     if intent_type == 'search_projects':
         if not data:
             filters = [v for k, v in intent.items()

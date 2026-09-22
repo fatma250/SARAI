@@ -194,13 +194,17 @@ async def ask_chatbot(
         data = query_semantic(db, question)
 
     # ── 2. Try Ollama with conversation history ──
+    # Small talk (greeting/thanks) is answered directly from the template:
+    # it needs no database context, and skipping Ollama guarantees the reply
+    # lands in the language actually detected from the greeting itself.
     answer = None
     source = "template"
-    context = format_results_for_prompt(intent_type, data)
-    history_dicts = [{"role": m.role, "text": m.text} for m in req.history]
-    answer = await call_ollama(question, context, history=history_dicts)
-    if answer:
-        source = "ollama"
+    if intent_type not in ("greeting", "thanks"):
+        context = format_results_for_prompt(intent_type, data)
+        history_dicts = [{"role": m.role, "text": m.text} for m in req.history]
+        answer = await call_ollama(question, context, history=history_dicts)
+        if answer:
+            source = "ollama"
 
     # ── 3. Fallback: template-based response (always works) ──
     if not answer:
