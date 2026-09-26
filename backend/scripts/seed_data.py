@@ -33,11 +33,11 @@ projects_data = [
 ]
 
 resources_data = [
-    {"title": "Arab Common AI Strategy 2023", "type": "Policy Document", "category": "Strategy", "language": "Arabic/English", "file_size": "2.4 MB", "description": "Official Arab Common AI Strategy document."},
-    {"title": "AI Ethics Guidelines Framework", "type": "White Paper", "category": "Ethics", "language": "English", "file_size": "1.8 MB", "description": "Comprehensive AI ethics guidelines for the Arab region."},
-    {"title": "Arabic NLP Dataset v2.0", "type": "Dataset", "category": "Data", "language": "Arabic", "file_size": "450 MB", "description": "Large-scale Arabic NLP dataset for machine learning."},
-    {"title": "Regional AI Maturity Assessment Report", "type": "Report", "category": "Research", "language": "English", "file_size": "5.2 MB", "description": "Annual assessment of AI maturity across Arab countries."},
-    {"title": "AI Governance Best Practices", "type": "White Paper", "category": "Governance", "language": "English", "file_size": "1.2 MB", "description": "Best practices for AI governance and regulation."},
+    {"title": "Arab Common AI Strategy 2023", "type": "Policy Document", "category": "Strategy", "language": "Arabic/English", "file_size": 2516582, "file_url": "https://example.org/sarai-resources/arab-common-ai-strategy-2023.pdf", "description": "Official Arab Common AI Strategy document."},
+    {"title": "AI Ethics Guidelines Framework", "type": "White Paper", "category": "Ethics", "language": "English", "file_size": 1887436, "file_url": "https://example.org/sarai-resources/ai-ethics-guidelines-framework.pdf", "description": "Comprehensive AI ethics guidelines for the Arab region."},
+    {"title": "Arabic NLP Dataset v2.0", "type": "Dataset", "category": "Data", "language": "Arabic", "file_size": 471859200, "file_url": "https://example.org/sarai-resources/arabic-nlp-dataset-v2.zip", "description": "Large-scale Arabic NLP dataset for machine learning."},
+    {"title": "Regional AI Maturity Assessment Report", "type": "Report", "category": "Research", "language": "English", "file_size": 5452595, "file_url": "https://example.org/sarai-resources/regional-ai-maturity-assessment.pdf", "description": "Annual assessment of AI maturity across Arab countries."},
+    {"title": "AI Governance Best Practices", "type": "White Paper", "category": "Governance", "language": "English", "file_size": 1258291, "file_url": "https://example.org/sarai-resources/ai-governance-best-practices.pdf", "description": "Best practices for AI governance and regulation."},
 ]
 
 def seed_database():

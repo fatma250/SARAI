@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, File, UploadFile
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_
 from typing import List, Optional
 from pydantic import BaseModel
+import os
+import uuid
+import shutil
 from app.database import get_db
 from app.models.project import Project
 from app.models.notification import Notification
@@ -10,11 +13,16 @@ from app.models.user import User
 from app.models.approval import Approval
 from app.models.project_audit_log import ProjectAuditLog
 from app.models.country import Country
+from app.models.resource import Resource
 from app.schemas.project import ProjectResponse
 from app.schemas.user import UserResponse
+from app.schemas.resource import ResourceResponse
 from datetime import datetime, timezone, timedelta
 from app.services.email_service import send_approval_email, send_rejection_email
 from app.dependencies import require_admin
+
+RESOURCE_UPLOAD_DIR = "uploads/resources"
+os.makedirs(RESOURCE_UPLOAD_DIR, exist_ok=True)
 
 
 class BulkApproveRequest(BaseModel):
@@ -27,6 +35,35 @@ class BulkRejectRequest(BaseModel):
 
 # Every endpoint in this router requires an authenticated administrator.
 router = APIRouter(dependencies=[Depends(require_admin)])
+
+@router.get("/resources", response_model=List[ResourceResponse])
+def get_all_resources_admin(db: Session = Depends(get_db)):
+    """All resources with their real view/download counters, for admin stats."""
+    return db.query(Resource).order_by(Resource.views_count.desc()).all()
+
+
+@router.post("/resources/{id}/file", response_model=ResourceResponse)
+async def upload_resource_file(id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Attach a real, locally-hosted file to a resource so downloads serve actual content
+    instead of an admin-entered external file_url."""
+    resource = db.query(Resource).filter(Resource.id == id).first()
+    if not resource:
+        raise HTTPException(status_code=404, detail="Resource not found")
+
+    file_ext = os.path.splitext(file.filename)[1]
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = os.path.join(RESOURCE_UPLOAD_DIR, unique_filename)
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    resource.file_path = file_path
+    resource.file_url = f"/uploads/resources/{unique_filename}"
+    resource.file_size = os.path.getsize(file_path)
+    resource.mime_type = file.content_type
+    db.commit()
+    db.refresh(resource)
+    return resource
+
 
 @router.get("/projects/pending", response_model=List[ProjectResponse])
 def get_pending_projects(db: Session = Depends(get_db)):

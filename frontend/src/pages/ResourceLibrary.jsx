@@ -1,27 +1,81 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { FaFileAlt, FaBook, FaDatabase, FaDownload, FaEye, FaSearch, FaFileContract, FaFileCode, FaChartLine } from 'react-icons/fa'
 import SearchBar from '../components/SearchBar'
 import { useTranslation } from 'react-i18next'
 
-const resources = [
-  { id: 1, title: 'Arab Common AI Strategy 2023', type: 'Policy Document', category: 'Strategy', language: 'Arabic/English', size: '2.4 MB', downloads: 1250 },
-  { id: 2, title: 'AI Ethics Guidelines Framework', type: 'White Paper', category: 'Ethics', language: 'English', size: '1.8 MB', downloads: 890 },
-  { id: 3, title: 'Arabic NLP Dataset v2.0', type: 'Dataset', category: 'Data', language: 'Arabic', size: '450 MB', downloads: 2340 },
-  { id: 4, title: 'Regional AI Maturity Assessment Report', type: 'Report', category: 'Research', language: 'English', size: '5.2 MB', downloads: 567 },
-  { id: 5, title: 'Startup Ecosystem Mapping Study', type: 'Report', category: 'Research', language: 'English', size: '3.1 MB', downloads: 423 },
-  { id: 6, title: 'AI Governance Best Practices', type: 'White Paper', category: 'Governance', language: 'English', size: '1.2 MB', downloads: 678 },
-  { id: 7, title: 'Computer Vision Annotated Dataset', type: 'Dataset', category: 'Data', language: 'Mixed', size: '890 MB', downloads: 1567 },
-  { id: 8, title: 'National AI Strategies Compilation', type: 'Policy Document', category: 'Strategy', language: 'Arabic', size: '8.5 MB', downloads: 912 }
-]
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const types = ['All', 'Policy Document', 'White Paper', 'Report', 'Dataset']
 const categories = ['All', 'Strategy', 'Ethics', 'Governance', 'Research', 'Data']
 
 function ResourceLibrary() {
   const { t } = useTranslation()
+  const [resources, setResources] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [selectedType, setSelectedType] = useState('All')
   const [selectedCategory, setSelectedCategory] = useState('All')
+
+  const searchTimerRef = useRef(null)
+
+  const fetchResources = async (params) => {
+    try {
+      setLoading(true)
+      const query = new URLSearchParams()
+      if (params.search) query.set('search', params.search)
+      if (params.type && params.type !== 'All') query.set('type_filter', params.type)
+      if (params.category && params.category !== 'All') query.set('category', params.category)
+
+      const res = await fetch(`${API_BASE}/api/resources/?${query}`)
+      if (!res.ok) throw new Error(`Server error ${res.status}`)
+      setResources(await res.json())
+      setError(null)
+    } catch (err) {
+      console.error('Failed to fetch resources:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Re-fetch when the type/category dropdown changes (instant)
+  useEffect(() => {
+    fetchResources({ search, type: selectedType, category: selectedCategory })
+  }, [selectedType, selectedCategory])
+
+  // Re-fetch when the search text changes (debounced 350ms)
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+    searchTimerRef.current = setTimeout(() => {
+      fetchResources({ search, type: selectedType, category: selectedCategory })
+    }, 350)
+    return () => clearTimeout(searchTimerRef.current)
+  }, [search])
+
+  // Locally-uploaded files are stored as a relative path (/uploads/resources/...) served
+  // by the backend, not the frontend dev server — resolve it against API_BASE.
+  const resolveFileUrl = (fileUrl) => (fileUrl?.startsWith('/') ? `${API_BASE}${fileUrl}` : fileUrl)
+
+  const handlePreview = async (resource) => {
+    try {
+      // GET /{id} registers a view server-side (Resource.views_count)
+      const res = await fetch(`${API_BASE}/api/resources/${resource.id}`)
+      if (res.ok) {
+        const updated = await res.json()
+        setResources(prev => prev.map(r => r.id === resource.id ? { ...r, views_count: updated.views_count } : r))
+      }
+    } catch (err) {
+      console.error('Failed to register view:', err)
+    }
+    if (resource.file_url) window.open(resolveFileUrl(resource.file_url), '_blank', 'noopener,noreferrer')
+  }
+
+  const handleDownload = (resource) => {
+    // Server increments Resource.downloads then redirects to file_url
+    window.open(`${API_BASE}/api/resources/${resource.id}/download`, '_blank', 'noopener,noreferrer')
+    setResources(prev => prev.map(r => r.id === resource.id ? { ...r, downloads: (r.downloads || 0) + 1 } : r))
+  }
 
   const getIcon = (type) => {
     switch (type) {
@@ -43,13 +97,12 @@ function ResourceLibrary() {
     return colors[type] || '#6b7280'
   }
 
-  const filtered = resources.filter(r => {
-    const matchSearch = r.title.toLowerCase().includes(search.toLowerCase()) ||
-                        r.category.toLowerCase().includes(search.toLowerCase())
-    const matchType = selectedType === 'All' || r.type === selectedType
-    const matchCategory = selectedCategory === 'All' || r.category === selectedCategory
-    return matchSearch && matchType && matchCategory
-  })
+  const formatFileSize = (bytes) => {
+    const n = Number(bytes)
+    if (!n) return null
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
+    return `${(n / (1024 * 1024)).toFixed(1)} MB`
+  }
 
   return (
     <div className="resource-library">
@@ -91,12 +144,30 @@ function ResourceLibrary() {
             </div>
           </div>
 
-          <div className="results-header">
-            <span className="results-count">{t('resources.resourcesFound', { count: filtered.length })}</span>
-          </div>
+          {!loading && !error && (
+            <div className="results-header">
+              <span className="results-count">{t('resources.resourcesFound', { count: resources.length })}</span>
+            </div>
+          )}
 
+          {loading && (
+            <div className="loading-state">
+              <div className="spinner"></div>
+              <p>Loading resources...</p>
+            </div>
+          )}
+
+          {error && !loading && (
+            <div className="no-results">
+              <div className="no-results-icon">⚠️</div>
+              <h3>Failed to load resources</h3>
+              <p>{error}</p>
+            </div>
+          )}
+
+          {!loading && !error && (
           <div className="resources-list">
-            {filtered.map(r => (
+            {resources.map(r => (
               <div key={r.id} className="resource-card">
                 <div className="resource-icon" style={{ background: `${getTypeColor(r.type)}15`, color: getTypeColor(r.type) }}>
                   {getIcon(r.type)}
@@ -112,24 +183,25 @@ function ResourceLibrary() {
                     </div>
                   </div>
                   <div className="resource-meta">
-                    <span><strong>{t('resources.language')}:</strong> {r.language}</span>
-                    <span><strong>{t('resources.size')}:</strong> {r.size}</span>
-                    <span><FaDownload /> {r.downloads.toLocaleString()} downloads</span>
+                    {r.language && <span><strong>{t('resources.language')}:</strong> {r.language}</span>}
+                    {formatFileSize(r.file_size) && <span><strong>{t('resources.size')}:</strong> {formatFileSize(r.file_size)}</span>}
+                    <span><FaDownload /> {(r.downloads || 0).toLocaleString()} downloads</span>
                   </div>
                 </div>
                 <div className="resource-actions">
-                  <button className="action-btn view-btn" title="Preview">
+                  <button className="action-btn view-btn" title="Preview" onClick={() => handlePreview(r)} disabled={!r.file_url}>
                     <FaEye />
                   </button>
-                  <button className="btn btn-primary">
+                  <button className="btn btn-primary" onClick={() => handleDownload(r)} disabled={!r.file_url}>
                     <FaDownload /> {t('resources.download')}
                   </button>
                 </div>
               </div>
             ))}
           </div>
+          )}
 
-          {filtered.length === 0 && (
+          {!loading && !error && resources.length === 0 && (
             <div className="no-results">
               <div className="no-results-icon">📚</div>
               <h3>{t('resources.noResults')}</h3>
@@ -351,6 +423,25 @@ function ResourceLibrary() {
         .action-btn:hover {
           border-color: var(--primary-color);
           color: var(--primary-color);
+        }
+        .loading-state {
+          text-align: center;
+          padding: 60px 0;
+        }
+        .spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid var(--gray-100);
+          border-top-color: var(--primary-color);
+          border-radius: 50%;
+          animation: resourcesSpin 0.8s linear infinite;
+          margin: 0 auto 16px;
+        }
+        @keyframes resourcesSpin { to { transform: rotate(360deg); } }
+        .action-btn:disabled,
+        .resource-actions .btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
         .no-results {
           text-align: center;

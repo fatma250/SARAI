@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { FaClipboardList, FaCheckCircle, FaTimesCircle, FaEye, FaSignOutAlt, FaGlobeAmericas, FaLayerGroup, FaMicrochip, FaCalendarAlt, FaBuilding, FaUsers, FaTrash, FaUserClock, FaEnvelope, FaUserCheck, FaUserSlash, FaHistory, FaExclamationTriangle, FaEdit, FaSearch } from 'react-icons/fa'
+import { FaClipboardList, FaCheckCircle, FaTimesCircle, FaEye, FaSignOutAlt, FaGlobeAmericas, FaLayerGroup, FaMicrochip, FaCalendarAlt, FaBuilding, FaUsers, FaTrash, FaUserClock, FaEnvelope, FaUserCheck, FaUserSlash, FaHistory, FaExclamationTriangle, FaEdit, FaSearch, FaBook, FaDownload, FaUpload } from 'react-icons/fa'
 import { toast } from 'react-toastify'
 import { useTranslation } from 'react-i18next'
 
@@ -15,7 +15,9 @@ function AdminDashboard() {
   const [users, setUsers] = useState([])
   const [pendingUsers, setPendingUsers] = useState([])
   const [activity, setActivity] = useState([])
-  const [activeTab, setActiveTab] = useState('projects') // 'projects', 'users', 'approvals', 'activity'
+  const [resources, setResources] = useState([])
+  const [uploadingResourceId, setUploadingResourceId] = useState(null)
+  const [activeTab, setActiveTab] = useState('projects') // 'projects', 'users', 'approvals', 'activity', 'resources'
   const [userFilter, setUserFilter] = useState('all') // 'all' or 'connected'
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -49,6 +51,8 @@ function AdminDashboard() {
         fetchPendingUsers()
       } else if (activeTab === 'activity') {
         fetchActivity()
+      } else if (activeTab === 'resources') {
+        fetchResources()
       }
       fetchStats()
     }
@@ -125,7 +129,7 @@ function AdminDashboard() {
     e.preventDefault()
     setLoginError('')
     try {
-      const res = await fetch(`${API_BASE}/api/users/login`, {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -183,6 +187,49 @@ function AdminDashboard() {
       console.error('Error fetching activity log:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchResources = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`${API_BASE}/api/admin/resources`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setResources(data)
+      }
+    } catch (err) {
+      console.error('Error fetching resources:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResourceFileUpload = async (resourceId, file) => {
+    if (!file) return
+    setUploadingResourceId(resourceId)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch(`${API_BASE}/api/admin/resources/${resourceId}/file`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setResources(prev => prev.map(r => r.id === resourceId ? updated : r))
+        toast.success('File uploaded — downloads now serve this real file.')
+      } else {
+        const errData = await res.json()
+        toast.error('Upload failed: ' + (errData.detail || 'Unknown error'))
+      }
+    } catch (err) {
+      toast.error('Network error: ' + err.message)
+    } finally {
+      setUploadingResourceId(null)
     }
   }
 
@@ -500,6 +547,13 @@ function AdminDashboard() {
                 <span className="stat-lab">Recent Activity</span>
               </div>
             </div>
+            <div className={`stat-item ${activeTab === 'resources' ? 'active' : ''}`} onClick={() => setActiveTab('resources')} style={{cursor: 'pointer'}}>
+              <div className="stat-icon online"><FaBook /></div>
+              <div className="stat-data">
+                <span className="stat-val">{resources.reduce((sum, r) => sum + (r.views_count || 0), 0)}</span>
+                <span className="stat-lab">Resource Views</span>
+              </div>
+            </div>
           </div>
 
           <div className="content-section">
@@ -507,12 +561,14 @@ function AdminDashboard() {
               <h2>
                 {activeTab === 'projects' ? 'Project Moderation' :
                  activeTab === 'users' ? 'User Management' :
-                 activeTab === 'activity' ? 'Activity Log' : 'Account Approvals'}
+                 activeTab === 'activity' ? 'Activity Log' :
+                 activeTab === 'resources' ? 'Resource Library Stats' : 'Account Approvals'}
               </h2>
               <span className="count-badge">
                 {activeTab === 'projects' ? `${projects.length} Projects` :
                  activeTab === 'users' ? `${users.length} Users` :
-                 activeTab === 'activity' ? `${activity.length} Entries` : `${pendingUsers.length} Pending`}
+                 activeTab === 'activity' ? `${activity.length} Entries` :
+                 activeTab === 'resources' ? `${resources.length} Resources` : `${pendingUsers.length} Pending`}
               </span>
 
               {activeTab === 'users' && (
@@ -833,6 +889,63 @@ function AdminDashboard() {
                   </table>
                 </div>
               </div>
+            ) : activeTab === 'resources' ? (
+              /* Resource Library Stats + real file upload */
+              <div className="users-container animate-up">
+                <div className="table-responsive">
+                  <table className="users-table">
+                    <thead>
+                      <tr>
+                        <th>Title</th>
+                        <th>Type / Category</th>
+                        <th><FaEye /> Views</th>
+                        <th><FaDownload /> Downloads</th>
+                        <th>File</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {resources.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="empty-table">No resources yet</td>
+                        </tr>
+                      ) : (
+                        resources.map((r) => {
+                          const hasRealFile = r.file_url && r.file_url.startsWith('/uploads/')
+                          return (
+                            <tr key={r.id}>
+                              <td>{r.title}</td>
+                              <td>{r.type} · {r.category}</td>
+                              <td>{r.views_count || 0}</td>
+                              <td>{r.downloads || 0}</td>
+                              <td>
+                                {r.file_url ? (
+                                  <span className={`status-badge ${hasRealFile ? 'active' : 'inactive'}`}>
+                                    {hasRealFile ? 'Real file' : 'External link only'}
+                                  </span>
+                                ) : (
+                                  <span className="status-badge inactive">No file</span>
+                                )}
+                              </td>
+                              <td>
+                                <label className="btn-upload-resource" title="Upload a real file for this resource">
+                                  {uploadingResourceId === r.id ? 'Uploading…' : <><FaUpload /> Upload</>}
+                                  <input
+                                    type="file"
+                                    style={{ display: 'none' }}
+                                    disabled={uploadingResourceId === r.id}
+                                    onChange={(e) => handleResourceFileUpload(r.id, e.target.files[0])}
+                                  />
+                                </label>
+                              </td>
+                            </tr>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             ) : (
               /* Pending Approvals Table */
               <div className="users-container animate-up">
@@ -1121,7 +1234,9 @@ const styles = `
   .btn-delete-user { background: #fff; border: 1px solid #fee2e2; color: #ef4444; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
   .btn-delete-user:hover { background: #ef4444; color: #fff; }
   .btn-delete-user:disabled { opacity: 0.5; cursor: not-allowed; }
-  
+  .btn-upload-resource { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #dbeafe; color: #2563eb; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; transition: 0.2s; }
+  .btn-upload-resource:hover { background: #2563eb; color: #fff; }
+
   .empty-table { text-align: center; padding: 48px !important; color: #94a3b8; font-style: italic; }
   .stat-val { display: block; font-size: 1.5rem; font-weight: 700; line-height: 1; color: #0f172a; }
   .stat-lab { font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; margin-top: 4px; letter-spacing: 0.025em; }

@@ -7,7 +7,7 @@ class ResourceBase(BaseModel):
     type: str
     category: str
     language: Optional[str] = None
-    file_size: Optional[str] = None
+    file_size: Optional[int] = None
     description: Optional[str] = None
     file_url: Optional[str] = None
 
@@ -19,13 +19,14 @@ class ResourceUpdate(BaseModel):
     type: Optional[str] = None
     category: Optional[str] = None
     language: Optional[str] = None
-    file_size: Optional[str] = None
+    file_size: Optional[int] = None
     description: Optional[str] = None
     file_url: Optional[str] = None
 
 class ResourceResponse(ResourceBase):
     id: int
     downloads: int
+    views_count: int
     created_at: datetime
     updated_at: datetime
 
