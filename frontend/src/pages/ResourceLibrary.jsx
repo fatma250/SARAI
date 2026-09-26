@@ -27,7 +27,7 @@ function ResourceLibrary() {
       if (params.type && params.type !== 'All') query.set('type_filter', params.type)
       if (params.category && params.category !== 'All') query.set('category', params.category)
 
-      const res = await fetch(`${API_BASE}/api/resources/?${query}`)
+      const res = await fetch(`${API_BASE}/resources/?${query}`)
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       setResources(await res.json())
       setError(null)
@@ -60,7 +60,7 @@ function ResourceLibrary() {
   const handlePreview = async (resource) => {
     try {
       // GET /{id} registers a view server-side (Resource.views_count)
-      const res = await fetch(`${API_BASE}/api/resources/${resource.id}`)
+      const res = await fetch(`${API_BASE}/resources/${resource.id}`)
       if (res.ok) {
         const updated = await res.json()
         setResources(prev => prev.map(r => r.id === resource.id ? { ...r, views_count: updated.views_count } : r))
@@ -73,7 +73,7 @@ function ResourceLibrary() {
 
   const handleDownload = (resource) => {
     // Server increments Resource.downloads then redirects to file_url
-    window.open(`${API_BASE}/api/resources/${resource.id}/download`, '_blank', 'noopener,noreferrer')
+    window.open(`${API_BASE}/resources/${resource.id}/download`, '_blank', 'noopener,noreferrer')
     setResources(prev => prev.map(r => r.id === resource.id ? { ...r, downloads: (r.downloads || 0) + 1 } : r))
   }
 

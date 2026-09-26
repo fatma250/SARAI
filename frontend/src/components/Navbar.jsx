@@ -67,7 +67,7 @@ function Navbar() {
     const token = getToken()
     if (!token || !user?.id) return
     try {
-      const res = await fetch(`${API_BASE}/api/notifications/${user.id}/unread/count`, {
+      const res = await fetch(`${API_BASE}/notifications/${user.id}/unread/count`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
@@ -83,7 +83,7 @@ function Navbar() {
     const token = getToken()
     if (!token || !user?.id) return
     try {
-      const res = await fetch(`${API_BASE}/api/notifications/${user.id}`, {
+      const res = await fetch(`${API_BASE}/notifications/${user.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (res.ok) {
@@ -117,7 +117,7 @@ function Navbar() {
     if (!notif.is_read) {
       const token = getToken()
       try {
-        await fetch(`${API_BASE}/api/notifications/${notif.id}/read`, {
+        await fetch(`${API_BASE}/notifications/${notif.id}/read`, {
           method: 'PUT',
           headers: { Authorization: `Bearer ${token}` },
         })
