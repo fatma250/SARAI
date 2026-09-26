@@ -24,4 +24,7 @@ USER appuser
 EXPOSE 8000
 
 # Single worker by default; scale with --workers or a process manager in prod.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --proxy-headers + --forwarded-allow-ips: trust X-Forwarded-Proto from the
+# Nginx reverse proxy (127.0.0.1) so redirects (e.g. FastAPI's trailing-slash
+# redirect) are generated as https:// instead of http://.
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=127.0.0.1"]
