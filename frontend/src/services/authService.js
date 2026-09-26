@@ -4,17 +4,17 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const authService = {
   register: async (userData) => {
-    const response = await axios.post(`${API_URL}/api/auth/register`, userData);
+    const response = await axios.post(`${API_URL}/auth/register`, userData);
     return response.data;
   },
 
   verifyEmail: async (token) => {
-    const response = await axios.get(`${API_URL}/api/auth/verify?token=${token}`);
+    const response = await axios.get(`${API_URL}/auth/verify?token=${token}`);
     return response.data;
   },
 
   login: async (credentials) => {
-    const response = await axios.post(`${API_URL}/api/auth/login`, credentials);
+    const response = await axios.post(`${API_URL}/auth/login`, credentials);
     if (response.data.access_token) {
       localStorage.setItem('access_token', response.data.access_token);
       localStorage.setItem('token_type', response.data.token_type);
@@ -30,12 +30,12 @@ const authService = {
   },
 
   forgotPassword: async (email) => {
-    const response = await axios.post(`${API_URL}/api/auth/forgot-password`, { email });
+    const response = await axios.post(`${API_URL}/auth/forgot-password`, { email });
     return response.data;
   },
 
   resetPassword: async (token, password, confirmPassword) => {
-    const response = await axios.post(`${API_URL}/api/auth/reset-password?token=${token}`, {
+    const response = await axios.post(`${API_URL}/auth/reset-password?token=${token}`, {
       password,
       confirm_password: confirmPassword
     });

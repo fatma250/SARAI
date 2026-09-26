@@ -62,7 +62,7 @@ function SDGDirectory() {
     try {
       setLoading(true)
       setError(null)
-      const res = await fetch(`${API_BASE}/api/sdgs/dashboard`)
+      const res = await fetch(`${API_BASE}/sdgs/dashboard`)
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       const data = await res.json()
 

@@ -46,12 +46,12 @@ function ProjectDetails() {
   const fetchProjectDetails = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`${API_BASE}/api/projects/${id}/details`)
+      const response = await fetch(`${API_BASE}/projects/${id}/details`)
       if (!response.ok) throw new Error('Project not found')
       const result = await response.json()
       setData(result)
       // Fetch similar projects in background
-      fetch(`${API_BASE}/api/projects/${id}/similar`)
+      fetch(`${API_BASE}/projects/${id}/similar`)
         .then(r => r.ok ? r.json() : [])
         .then(setSimilarProjects)
         .catch(() => {})
@@ -65,7 +65,7 @@ function ProjectDetails() {
   const handleGenerateReport = async (lang = 'fr') => {
     try {
       setGeneratingReport(true)
-      const response = await fetch(`${API_BASE}/api/projects/${id}/report?lang=${lang}`)
+      const response = await fetch(`${API_BASE}/projects/${id}/report?lang=${lang}`)
 
       if (!response.ok) throw new Error('Failed to generate report')
 

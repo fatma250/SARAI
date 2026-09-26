@@ -225,7 +225,7 @@ function KnowledgeMap() {
 
   /* Fetch projets et calcul stats dynamiques par pays */
   useEffect(() => {
-    fetch(`${API_BASE}/api/projects/?limit=10000`)
+    fetch(`${API_BASE}/projects/?limit=10000`)
       .then(r => r.json())
       .then(data => {
         const projects = Array.isArray(data) ? data : (data.items || [])

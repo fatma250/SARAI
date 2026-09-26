@@ -83,7 +83,7 @@ function CountryPage() {
     setProjects([])
     setStakeholders([])
     
-    fetch(`${API_BASE}/api/projects/?country=${encodeURIComponent(apiCountry)}`)
+    fetch(`${API_BASE}/projects/?country=${encodeURIComponent(apiCountry)}`)
       .then(res => res.json())
       .then(data => {
         setProjects(data)
@@ -94,7 +94,7 @@ function CountryPage() {
         setLoading(false)
       })
 
-    fetch(`${API_BASE}/api/stakeholders/?country=${encodeURIComponent(apiCountry)}`)
+    fetch(`${API_BASE}/stakeholders/?country=${encodeURIComponent(apiCountry)}`)
       .then(res => res.json())
       .then(data => setStakeholders(data))
       .catch(err => console.error('Error fetching stakeholders:', err))

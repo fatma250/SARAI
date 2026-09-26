@@ -200,7 +200,7 @@ function ProjectStocktaking() {
 
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/projects/${editProjectId}`, {
+        const res = await fetch(`${API_BASE}/projects/${editProjectId}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (!res.ok) {
@@ -260,7 +260,7 @@ function ProjectStocktaking() {
       if (f.filterTechnology) params.set('technology', f.filterTechnology)
       if (f.searchQuery) params.set('search', f.searchQuery)
 
-      const res = await fetch(`${API_BASE}/api/projects/?${params}`)
+      const res = await fetch(`${API_BASE}/projects/?${params}`)
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       const data = await res.json()
 
@@ -285,21 +285,21 @@ function ProjectStocktaking() {
 
   const fetchSDGList = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/sdgs/`)
+      const res = await fetch(`${API_BASE}/sdgs/`)
       if (res.ok) setSdgList(await res.json())
     } catch {}
   }
 
   const fetchMeta = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/projects/meta`)
+      const res = await fetch(`${API_BASE}/projects/meta`)
       if (res.ok) setMetaData(await res.json())
     } catch {}
   }
 
   const fetchStakeholders = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/stakeholders/`)
+      const res = await fetch(`${API_BASE}/stakeholders/`)
       if (res.ok) setAllStakeholders(await res.json())
     } catch (err) { console.error('Failed to fetch stakeholders:', err) }
   }
@@ -314,7 +314,7 @@ function ProjectStocktaking() {
 
   const fetchCountries = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/countries/`)
+      const res = await fetch(`${API_BASE}/countries/`)
       if (res.ok) setCountries(await res.json())
     } catch (err) { console.error('Failed to fetch countries:', err) }
   }
@@ -362,7 +362,7 @@ function ProjectStocktaking() {
     try {
       const params = new URLSearchParams({ title: formData.title.trim() })
       if (formData.country_id) params.set('country_id', formData.country_id)
-      const res = await fetch(`${API_BASE}/api/projects/check-duplicate?${params}`)
+      const res = await fetch(`${API_BASE}/projects/check-duplicate?${params}`)
       if (res.ok) {
         const matches = await res.json()
         setDuplicateWarnings(matches.filter(m => !isEdit || m.id !== Number(editProjectId)))
@@ -415,7 +415,7 @@ function ProjectStocktaking() {
       let project
 
       if (isEdit) {
-        const response = await fetch(`${API_BASE}/api/projects/${editProjectId}`, {
+        const response = await fetch(`${API_BASE}/projects/${editProjectId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify(mapFormDataToUpdatePayload(formData))
@@ -451,7 +451,7 @@ function ProjectStocktaking() {
         if (formData.budget) projectData.budget = formData.budget
         if (formData.planned_duration) projectData.planned_duration = formData.planned_duration
 
-        const response = await fetch(`${API_BASE}/api/projects/submit`, {
+        const response = await fetch(`${API_BASE}/projects/submit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify(projectData)
@@ -479,7 +479,7 @@ function ProjectStocktaking() {
         })
 
         try {
-          await fetch(`${API_BASE}/api/projects/${project.id}/documents`, {
+          await fetch(`${API_BASE}/projects/${project.id}/documents`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: fileFormData
@@ -493,7 +493,7 @@ function ProjectStocktaking() {
       // Link newly-added stakeholders, if any (shared between create and edit)
       for (const s of selectedStakeholders) {
         try {
-          await fetch(`${API_BASE}/api/projects/${project.id}/stakeholders/${s.stakeholder_id}?role=${s.role}`, {
+          await fetch(`${API_BASE}/projects/${project.id}/stakeholders/${s.stakeholder_id}?role=${s.role}`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
           })
@@ -540,7 +540,7 @@ function ProjectStocktaking() {
   const removeExistingStakeholder = async (stakeholderId) => {
     const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
     try {
-      const res = await fetch(`${API_BASE}/api/projects/${editProjectId}/stakeholders/${stakeholderId}`, {
+      const res = await fetch(`${API_BASE}/projects/${editProjectId}/stakeholders/${stakeholderId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
       })
@@ -564,7 +564,7 @@ function ProjectStocktaking() {
     }
     const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
     try {
-      const res = await fetch(`${API_BASE}/api/stakeholders/`, {
+      const res = await fetch(`${API_BASE}/stakeholders/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(newStakeholder)
@@ -605,7 +605,7 @@ function ProjectStocktaking() {
     if (f.filterSdgNum) params.set('sdg_num', f.filterSdgNum)
     if (f.filterTechnology) params.set('technology', f.filterTechnology)
     if (f.searchQuery) params.set('search', f.searchQuery)
-    window.open(`${API_BASE}/api/projects/export?${params}`, '_blank')
+    window.open(`${API_BASE}/projects/export?${params}`, '_blank')
   }
 
   const formatDate = (dateStr) => {

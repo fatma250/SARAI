@@ -71,7 +71,7 @@ function AdminDashboard() {
   const fetchPendingUsers = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${API_BASE}/api/admin/users/pending`, {
+      const res = await fetch(`${API_BASE}/admin/users/pending`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
@@ -88,7 +88,7 @@ function AdminDashboard() {
   const handleApproveUser = async (userId) => {
     setActionLoading(userId)
     try {
-      const res = await fetch(`${API_BASE}/api/admin/users/${userId}/approve`, {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}/approve`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -108,7 +108,7 @@ function AdminDashboard() {
     if (!window.confirm(t('admin.confirmRejectUser'))) return
     setActionLoading(userId)
     try {
-      const res = await fetch(`${API_BASE}/api/admin/users/${userId}/reject`, {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}/reject`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: 'Dossier non conforme' })
@@ -129,7 +129,7 @@ function AdminDashboard() {
     e.preventDefault()
     setLoginError('')
     try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
+      const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -159,7 +159,7 @@ function AdminDashboard() {
       if (projectSearch.trim()) params.set('search', projectSearch.trim())
       if (projectStatusFilter !== 'all') params.set('status', projectStatusFilter)
       if (projectSectorFilter !== 'all') params.set('sector', projectSectorFilter)
-      const res = await fetch(`${API_BASE}/api/admin/projects?${params.toString()}`, {
+      const res = await fetch(`${API_BASE}/admin/projects?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
@@ -176,7 +176,7 @@ function AdminDashboard() {
   const fetchActivity = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${API_BASE}/api/admin/activity`, {
+      const res = await fetch(`${API_BASE}/admin/activity`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
@@ -193,7 +193,7 @@ function AdminDashboard() {
   const fetchResources = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`${API_BASE}/api/admin/resources`, {
+      const res = await fetch(`${API_BASE}/admin/resources`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
@@ -213,7 +213,7 @@ function AdminDashboard() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const res = await fetch(`${API_BASE}/api/admin/resources/${resourceId}/file`, {
+      const res = await fetch(`${API_BASE}/admin/resources/${resourceId}/file`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
@@ -245,7 +245,7 @@ function AdminDashboard() {
     if (selectedProjectIds.size === 0) return
     setActionLoading('bulk')
     try {
-      const res = await fetch(`${API_BASE}/api/admin/projects/bulk-approve`, {
+      const res = await fetch(`${API_BASE}/admin/projects/bulk-approve`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ project_ids: Array.from(selectedProjectIds) })
@@ -293,7 +293,7 @@ function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/admin/stats`, {
+      const res = await fetch(`${API_BASE}/admin/stats`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       if (res.ok) {
@@ -308,7 +308,7 @@ function AdminDashboard() {
   const handleApprove = async (projectId) => {
     setActionLoading(projectId)
     try {
-      const res = await fetch(`${API_BASE}/api/admin/projects/${projectId}/approve`, {
+      const res = await fetch(`${API_BASE}/admin/projects/${projectId}/approve`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -335,7 +335,7 @@ function AdminDashboard() {
     const userId = deleteUserTarget.id
     setActionLoading(userId)
     try {
-      const res = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })
@@ -370,12 +370,12 @@ function AdminDashboard() {
     setActionLoading(isBulkReject ? 'bulk' : rejectProjectId)
     try {
       const res = isBulkReject
-        ? await fetch(`${API_BASE}/api/admin/projects/bulk-reject`, {
+        ? await fetch(`${API_BASE}/admin/projects/bulk-reject`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ project_ids: Array.from(selectedProjectIds), reason: rejectReason })
           })
-        : await fetch(`${API_BASE}/api/admin/projects/${rejectProjectId}/reject`, {
+        : await fetch(`${API_BASE}/admin/projects/${rejectProjectId}/reject`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ reason: rejectReason })
@@ -427,7 +427,7 @@ function AdminDashboard() {
     }
     setActionLoading('edit')
     try {
-      const res = await fetch(`${API_BASE}/api/projects/${editProjectTarget.id}`, {
+      const res = await fetch(`${API_BASE}/projects/${editProjectTarget.id}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm)
@@ -455,7 +455,7 @@ function AdminDashboard() {
     const projectId = deleteProjectTarget.id
     setActionLoading(`delete-${projectId}`)
     try {
-      const res = await fetch(`${API_BASE}/api/projects/${projectId}`, {
+      const res = await fetch(`${API_BASE}/projects/${projectId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })

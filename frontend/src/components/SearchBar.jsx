@@ -42,7 +42,7 @@ function SearchBar({
     debounceRef.current = setTimeout(async () => {
       setSugLoading(true)
       try {
-        const res = await fetch(`${API_BASE}/api/search/suggestions?q=${encodeURIComponent(q)}&limit=8`)
+        const res = await fetch(`${API_BASE}/search/suggestions?q=${encodeURIComponent(q)}&limit=8`)
         const data = await res.json()
         setSuggestions(data.suggestions || [])
         setShowDrop((data.suggestions || []).length > 0)

@@ -38,13 +38,13 @@ function Analytics() {
     try {
       setLoading(true)
       const [ov, pbc, pbs, ait, tl, sbt, sbc] = await Promise.all([
-        fetch(`${API_BASE}/api/analytics/overview`).then(r => r.json()),
-        fetch(`${API_BASE}/api/analytics/projects-by-country`).then(r => r.json()),
-        fetch(`${API_BASE}/api/analytics/projects-by-sector`).then(r => r.json()),
-        fetch(`${API_BASE}/api/analytics/ai-technologies`).then(r => r.json()),
-        fetch(`${API_BASE}/api/analytics/projects-timeline`).then(r => r.json()),
-        fetch(`${API_BASE}/api/analytics/stakeholders-by-type`).then(r => r.json()),
-        fetch(`${API_BASE}/api/analytics/stakeholders-by-country`).then(r => r.json()),
+        fetch(`${API_BASE}/analytics/overview`).then(r => r.json()),
+        fetch(`${API_BASE}/analytics/projects-by-country`).then(r => r.json()),
+        fetch(`${API_BASE}/analytics/projects-by-sector`).then(r => r.json()),
+        fetch(`${API_BASE}/analytics/ai-technologies`).then(r => r.json()),
+        fetch(`${API_BASE}/analytics/projects-timeline`).then(r => r.json()),
+        fetch(`${API_BASE}/analytics/stakeholders-by-type`).then(r => r.json()),
+        fetch(`${API_BASE}/analytics/stakeholders-by-country`).then(r => r.json()),
       ])
       setOverview(ov); setProjectsByCountry(pbc); setProjectsBySector(pbs)
       setAiTech(ait); setTimeline(tl); setStakeholdersByType(sbt); setStakeholdersByCountry(sbc)
@@ -57,7 +57,7 @@ function Analytics() {
       setDownloading(true)
       toast.info('Generating PDF, please wait…', { autoClose: 8000 })
 
-      const res = await fetch(`${API_BASE}/api/analytics/report`)
+      const res = await fetch(`${API_BASE}/analytics/report`)
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       const html = await res.text()
 

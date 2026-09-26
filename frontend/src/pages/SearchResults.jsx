@@ -87,7 +87,7 @@ function SearchResults() {
   const pageSize = 10
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/search/filters`)
+    fetch(`${API_BASE}/search/filters`)
       .then(r => r.json())
       .then(data => setFilterOptions(data))
       .catch(() => {})
@@ -112,7 +112,7 @@ function SearchResults() {
       params.set('page',      String(pg))
       params.set('page_size', String(pageSize))
 
-      const res  = await fetch(`${API_BASE}/api/ai-search?${params}`)
+      const res  = await fetch(`${API_BASE}/ai-search?${params}`)
       const data = await res.json()
       const all = [
         ...(data.projects     || []).map(p => ({ ...p, entity_type: 'project' })),

@@ -58,7 +58,7 @@ function Profile() {
     const fetchProjects = async () => {
       try {
         const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
-        const res = await fetch(`${API_BASE}/api/projects/user/${user.id}`, {
+        const res = await fetch(`${API_BASE}/projects/user/${user.id}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (res.ok) setProjects(await res.json())
@@ -79,7 +79,7 @@ function Profile() {
     setSaving(true)
     try {
       const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
-      const res = await fetch(`${API_BASE}/api/users/${user.id}`, {
+      const res = await fetch(`${API_BASE}/users/${user.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -133,7 +133,7 @@ function Profile() {
     setDeleting(true)
     try {
       const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
-      const res = await fetch(`${API_BASE}/api/projects/${deleteTarget.id}`, {
+      const res = await fetch(`${API_BASE}/projects/${deleteTarget.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -156,7 +156,7 @@ function Profile() {
       const base64 = ev.target.result
       try {
         const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
-        const res = await fetch(`${API_BASE}/api/users/${user.id}`, {
+        const res = await fetch(`${API_BASE}/users/${user.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

@@ -151,7 +151,7 @@ function StakeholderDirectory() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/stakeholders/`)
+    fetch(`${API_BASE}/stakeholders/`)
       .then(res => {
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
         return res.json()

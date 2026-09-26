@@ -53,7 +53,7 @@ function Home() {
     }
     
     // Fetch real stats
-    fetch(`${API_BASE}/api/analytics/overview`)
+    fetch(`${API_BASE}/analytics/overview`)
       .then(res => res.json())
       .then(data => {
         if (data) {
@@ -69,7 +69,7 @@ function Home() {
   }, [])
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/countries/`)
+    fetch(`${API_BASE}/countries/`)
       .then(res => res.json())
       .then(data => {
         if (data && data.length > 0) {
