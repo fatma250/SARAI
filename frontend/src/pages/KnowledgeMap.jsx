@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -142,27 +142,38 @@ const countryNameMapping = {
 }
 
 const ARAB_CITIES = [
-  { lat: 34.02, lng: -6.84 }, { lat: 36.74, lng:  3.06 }, { lat: 36.82, lng: 10.18 },
-  { lat: 32.90, lng: 13.18 }, { lat: 30.06, lng: 31.25 }, { lat: 15.55, lng: 32.53 },
-  { lat: 18.08, lng:-15.97 }, { lat:  2.05, lng: 45.34 }, { lat: 11.59, lng: 43.15 },
-  { lat: 24.69, lng: 46.72 }, { lat: 15.35, lng: 44.21 }, { lat: 23.61, lng: 58.59 },
-  { lat: 24.47, lng: 54.37 }, { lat: 25.29, lng: 51.53 }, { lat: 29.37, lng: 47.97 },
-  { lat: 33.34, lng: 44.40 }, { lat: 31.96, lng: 35.91 }, { lat: 33.51, lng: 36.29 },
-  { lat: 33.89, lng: 35.50 }, { lat: 31.90, lng: 35.20 },
+  { iso: 'ma', lat: 34.02, lng: -6.84  }, { iso: 'dz', lat: 36.74, lng:  3.06 }, { iso: 'tn', lat: 36.82, lng: 10.18 },
+  { iso: 'ly', lat: 32.90, lng: 13.18  }, { iso: 'eg', lat: 30.06, lng: 31.25 }, { iso: 'sd', lat: 15.55, lng: 32.53 },
+  { iso: 'mr', lat: 18.08, lng:-15.97  }, { iso: 'so', lat:  2.05, lng: 45.34 }, { iso: 'dj', lat: 11.59, lng: 43.15 },
+  { iso: 'sa', lat: 24.69, lng: 46.72  }, { iso: 'ye', lat: 15.35, lng: 44.21 }, { iso: 'om', lat: 23.61, lng: 58.59 },
+  { iso: 'ae', lat: 24.47, lng: 54.37  }, { iso: 'qa', lat: 25.29, lng: 51.53 }, { iso: 'kw', lat: 29.37, lng: 47.97 },
+  { iso: 'iq', lat: 33.34, lng: 44.40  }, { iso: 'jo', lat: 31.96, lng: 35.91 }, { iso: 'sy', lat: 33.51, lng: 36.29 },
+  { iso: 'lb', lat: 33.89, lng: 35.50  }, { iso: 'ps', lat: 31.90, lng: 35.20 },
+  { iso: 'bh', lat: 26.23, lng: 50.59  }, { iso: 'km', lat: -11.70, lng: 43.26 },
 ]
 
-function buildConnections() {
+const ISO_TO_FR = Object.fromEntries(
+  Object.values(COUNTRY_STATS).map(v => [v.iso, v.fr])
+)
+
+/* Le nombre de voisins reliés à chaque pays (k) dépend de son nombre réel de
+   projets : un pays actif se retrouve avec plusieurs liens qui en partent,
+   un pays avec peu ou pas de projets n'en a que 2 (juste assez pour rester
+   visuellement intégré au réseau). C'est le nombre de liens, pas la taille
+   du nœud, qui porte l'information. */
+function buildConnections(projectStats) {
   const pairs = new Set()
   ARAB_CITIES.forEach((c, i) => {
+    const count = projectStats[c.iso]?.count || 0
+    const k = Math.min(9, 2 + Math.round(Math.sqrt(count)))
     ARAB_CITIES
       .map((d, j) => ({ j, dist: Math.hypot(d.lat - c.lat, d.lng - c.lng) }))
-      .filter(x => x.j !== i).sort((a, b) => a.dist - b.dist).slice(0, 5)
+      .filter(x => x.j !== i).sort((a, b) => a.dist - b.dist).slice(0, k)
       .forEach(({ j }) => pairs.add(`${Math.min(i,j)}-${Math.max(i,j)}`))
   })
   return [...pairs].map(k => k.split('-').map(Number))
 }
-const CONNECTIONS = buildConnections()
-const NODE_PTS = ARAB_CITIES.map(c => { const [x, y] = project(c.lat, c.lng); return { x, y } })
+const NODE_PTS = ARAB_CITIES.map(c => { const [x, y] = project(c.lat, c.lng); return { iso: c.iso, x, y } })
 
 const HDI_COLOR = hdi => {
   const v = parseFloat(hdi)
@@ -196,6 +207,9 @@ function KnowledgeMap() {
   const [selectedMember, setSelectedMember]   = useState(null)  /* vue IA dans le panel */
   const [projectStats, setProjectStats]       = useState({})    /* stats dynamiques par iso */
   const [statsLoading, setStatsLoading]       = useState(true)
+
+  /* Recalculé uniquement quand les stats projets changent (une fois chargées) */
+  const CONNECTIONS = useMemo(() => buildConnections(projectStats), [projectStats])
 
   useEffect(() => {
     fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
@@ -440,18 +454,30 @@ function KnowledgeMap() {
             )
           })}
 
-          {/* Nœuds */}
-          {NODE_PTS.map((pt, i) => (
-            <g key={i}>
-              <circle cx={pt.x} cy={pt.y} r={5 / zoomScale}
-                fill="rgba(125,211,252,0.25)" filter="url(#km-halo)"
-                className={`km-pulse km-pulse-${i % 3}`}/>
-              <circle cx={pt.x} cy={pt.y} r={3 / zoomScale}
-                fill="rgba(125,211,252,0.55)" filter="url(#km-glow)"/>
-              <circle cx={pt.x} cy={pt.y} r={1.6 / zoomScale}
-                fill="#ffffff" filter="url(#km-glow)"/>
-            </g>
-          ))}
+          {/* Nœuds — taille sobre et uniforme ; c'est le nombre de liens
+              (CONNECTIONS, calculé plus haut à partir de projectStats) qui
+              porte l'information d'activité, pas le nœud lui-même. Le nom
+              du pays et son nombre de projets restent disponibles au survol. */}
+          {NODE_PTS.map((pt, i) => {
+            const count = projectStats[pt.iso]?.count || 0
+            const countryName = ISO_TO_FR[pt.iso] || pt.iso.toUpperCase()
+            return (
+              <g key={i}
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={e => setTooltip({ name: `${countryName} — ${count} projet${count !== 1 ? 's' : ''}`, x: e.clientX, y: e.clientY })}
+                onMouseMove={e => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : null)}
+                onMouseLeave={() => setTooltip(null)}
+              >
+                <circle cx={pt.x} cy={pt.y} r={5 / zoomScale}
+                  fill="rgba(125,211,252,0.25)" filter="url(#km-halo)"
+                  className={`km-pulse km-pulse-${i % 3}`}/>
+                <circle cx={pt.x} cy={pt.y} r={3 / zoomScale}
+                  fill="rgba(125,211,252,0.55)" filter="url(#km-glow)"/>
+                <circle cx={pt.x} cy={pt.y} r={1.6 / zoomScale}
+                  fill="#ffffff" filter="url(#km-glow)"/>
+              </g>
+            )
+          })}
         </svg>
 
         {/* Tooltip */}
