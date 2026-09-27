@@ -151,6 +151,7 @@ logger.info(f"[CORS] Allowed origins: {CORS_ORIGINS}")
 uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(uploads_dir, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+app.mount("/api/uploads", StaticFiles(directory=uploads_dir), name="uploads_api")
 
 # Serve frontend static files
 frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")

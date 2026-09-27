@@ -495,6 +495,46 @@ def send_admin_new_project_alert(project_title: str, organization_name: str, pro
     return _send_email(ADMIN_EMAIL, f"New project submitted: {project_title}", html_body)
 
 
+def send_admin_new_resource_alert(resource_title: str, organization_name: str, resource_id: int) -> bool:
+    """
+    Notify the admin that a new resource was submitted and is awaiting review.
+    """
+    html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        .container {{ max-width: 600px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }}
+        .header {{ background: #ffffff; color: #1e293b; padding: 24px 20px; text-align: center; border-bottom: 2px solid #2563EB; }}
+        .content {{ padding: 32px 30px; color: #374151; line-height: 1.6; }}
+        .field {{ margin: 6px 0; font-size: 14px; }}
+        .button {{ display: inline-block; padding: 12px 28px; background: #2563EB; color: white !important;
+                   text-decoration: none; border-radius: 8px; margin: 20px 0 4px; font-weight: 600; }}
+        .footer {{ padding: 20px; background: #f9fafb; text-align: center; font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; }}
+    </style>
+</head>
+<body style="margin: 0; padding: 20px; background: #f3f4f6;">
+    <div class="container">
+        <div class="header">
+            <h1 style="margin: 0; font-size: 18px; color: #2563EB;">AICTO Admin Alert</h1>
+        </div>
+        <div class="content">
+            <h2 style="margin-top: 0; font-size: 17px;">New resource submitted</h2>
+            <p class="field"><strong>Title:</strong> {resource_title}</p>
+            <p class="field"><strong>Submitted by:</strong> {organization_name}</p>
+            <p class="field"><strong>Resource ID:</strong> {resource_id}</p>
+            <p>This resource is pending review before it can be published.</p>
+            <a href="{FRONTEND_URL}/admin" class="button">Review in Admin Panel</a>
+        </div>
+        <div class="footer">
+            <p>Arab ICT Organization (AICTO) &middot; Automated admin notification</p>
+        </div>
+    </div>
+</body>
+</html>"""
+    return _send_email(ADMIN_EMAIL, f"New resource submitted: {resource_title}", html_body)
+
+
 def _send_email(recipient_email: str, subject: str, html_content: str) -> bool:
     """Internal helper to send email."""
     logger.info(f"[EMAIL] 📧 Attempting to send '{subject}' to {recipient_email}...")

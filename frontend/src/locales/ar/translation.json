@@ -280,7 +280,19 @@
     "submitResource": "تقديم مورد",
     "download": "تحميل",
     "language": "اللغة",
-    "size": "الحجم"
+    "size": "الحجم",
+    "submitHint": "ستتم مراجعة موردك من قبل مسؤول قبل ظهوره في المكتبة.",
+    "submitTitleLabel": "العنوان",
+    "submitTitlePlaceholder": "مثال: إرشادات أخلاقيات الذكاء الاصطناعي 2026",
+    "submitDescriptionLabel": "الوصف",
+    "submitFileLabel": "الملف",
+    "submitChooseFile": "اختر ملفًا",
+    "submitting": "جارٍ الإرسال...",
+    "submitCta": "إرسال للمراجعة",
+    "submitLoginRequired": "يرجى تسجيل الدخول لتقديم مورد",
+    "submitFileRequired": "يرجى إرفاق ملف",
+    "submitSuccess": "تم إرسال موردك للمراجعة!",
+    "submitSuccessPublished": "تم نشر المورد!"
   },
   "analytics": {
     "title": "الذكاء الإقليمي",

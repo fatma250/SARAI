@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { FaFileAlt, FaBook, FaDatabase, FaDownload, FaEye, FaSearch, FaFileContract, FaFileCode, FaChartLine } from 'react-icons/fa'
+import { useNavigate } from 'react-router-dom'
+import { toast } from 'react-toastify'
+import { FaFileAlt, FaBook, FaDatabase, FaDownload, FaEye, FaSearch, FaFileContract, FaFileCode, FaChartLine, FaTimes, FaUpload } from 'react-icons/fa'
 import SearchBar from '../components/SearchBar'
 import { useTranslation } from 'react-i18next'
 
@@ -8,14 +10,21 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const types = ['All', 'Policy Document', 'White Paper', 'Report', 'Dataset']
 const categories = ['All', 'Strategy', 'Ethics', 'Governance', 'Research', 'Data']
 
+const emptySubmitForm = { title: '', type: types[1], category: categories[1], file: null }
+
 function ResourceLibrary() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [resources, setResources] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [selectedType, setSelectedType] = useState('All')
   const [selectedCategory, setSelectedCategory] = useState('All')
+
+  const [showSubmitModal, setShowSubmitModal] = useState(false)
+  const [submitForm, setSubmitForm] = useState(emptySubmitForm)
+  const [submitting, setSubmitting] = useState(false)
 
   const searchTimerRef = useRef(null)
 
@@ -75,6 +84,54 @@ function ResourceLibrary() {
     // Server increments Resource.downloads then redirects to file_url
     window.open(`${API_BASE}/resources/${resource.id}/download`, '_blank', 'noopener,noreferrer')
     setResources(prev => prev.map(r => r.id === resource.id ? { ...r, downloads: (r.downloads || 0) + 1 } : r))
+  }
+
+  const openSubmitModal = () => {
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
+    if (!token) {
+      toast.error(t('resources.submitLoginRequired'))
+      navigate('/login')
+      return
+    }
+    setSubmitForm(emptySubmitForm)
+    setShowSubmitModal(true)
+  }
+
+  const handleSubmitResource = async (e) => {
+    e.preventDefault()
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
+    if (!token) { toast.error(t('resources.submitLoginRequired')); navigate('/login'); return }
+    if (!submitForm.file) { toast.error(t('resources.submitFileRequired')); return }
+
+    setSubmitting(true)
+    try {
+      const formData = new FormData()
+      formData.append('title', submitForm.title)
+      formData.append('type', submitForm.type)
+      formData.append('category', submitForm.category)
+      formData.append('file', submitForm.file)
+
+      const res = await fetch(`${API_BASE}/resources/submit`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.detail || 'Failed to submit resource')
+      }
+
+      const created = await res.json()
+      toast.success(created.status === 'approved' ? t('resources.submitSuccessPublished') : t('resources.submitSuccess'))
+      setShowSubmitModal(false)
+      setSubmitForm(emptySubmitForm)
+      if (created.status === 'approved') fetchResources({ search, type: selectedType, category: selectedCategory })
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const getIcon = (type) => {
@@ -215,13 +272,77 @@ function ResourceLibrary() {
                 <h3>{t('resources.ctaTitle')}</h3>
                 <p>{t('resources.ctaSubtitle')}</p>
               </div>
-              <button className="btn btn-secondary btn-lg">
+              <button className="btn btn-secondary btn-lg" onClick={openSubmitModal}>
                 {t('resources.submitResource')}
               </button>
             </div>
           </div>
         </div>
       </section>
+
+      {showSubmitModal && (
+        <div className="modal-overlay" onClick={() => !submitting && setShowSubmitModal(false)}>
+          <div className="submit-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="submit-modal-header">
+              <h3>{t('resources.submitResource')}</h3>
+              <button className="close-btn" onClick={() => setShowSubmitModal(false)} disabled={submitting}><FaTimes /></button>
+            </div>
+            <p className="submit-modal-hint">{t('resources.submitHint')}</p>
+            <form onSubmit={handleSubmitResource} className="submit-form">
+              <div className="form-group">
+                <label>{t('resources.submitTitleLabel')}</label>
+                <input
+                  type="text"
+                  required
+                  placeholder={t('resources.submitTitlePlaceholder')}
+                  value={submitForm.title}
+                  onChange={(e) => setSubmitForm(f => ({ ...f, title: e.target.value }))}
+                />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>{t('resources.typeFilter')}</label>
+                  <select
+                    value={submitForm.type}
+                    onChange={(e) => setSubmitForm(f => ({ ...f, type: e.target.value }))}
+                  >
+                    {types.filter(tp => tp !== 'All').map(tp => <option key={tp} value={tp}>{tp}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>{t('resources.categoryFilter')}</label>
+                  <select
+                    value={submitForm.category}
+                    onChange={(e) => setSubmitForm(f => ({ ...f, category: e.target.value }))}
+                  >
+                    {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>{t('resources.submitFileLabel')}</label>
+                <label className="file-input-label">
+                  <FaUpload /> {submitForm.file ? submitForm.file.name : t('resources.submitChooseFile')}
+                  <input
+                    type="file"
+                    accept="application/pdf,.doc,.docx,.zip,.csv,.xlsx"
+                    style={{ display: 'none' }}
+                    onChange={(e) => setSubmitForm(f => ({ ...f, file: e.target.files[0] || null }))}
+                  />
+                </label>
+              </div>
+              <div className="submit-modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowSubmitModal(false)} disabled={submitting}>
+                  {t('common.cancel')}
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={submitting}>
+                  {submitting ? t('resources.submitting') : t('resources.submitCta')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .page-hero {
@@ -530,6 +651,105 @@ function ResourceLibrary() {
         }
         [data-theme="dark"] .resource-actions {
           border-top-color: rgba(255,255,255,0.06);
+        }
+
+        /* ── Submit resource modal ── */
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.55);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+          z-index: 1000;
+        }
+        .submit-modal {
+          background: #fff;
+          border-radius: 16px;
+          max-width: 520px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          padding: 32px;
+          box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+        }
+        .submit-modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 8px;
+        }
+        .submit-modal-header h3 {
+          margin: 0;
+          font-size: 1.3rem;
+          font-weight: 800;
+        }
+        .submit-modal-header .close-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: var(--gray-500, #64748b);
+          font-size: 1.1rem;
+        }
+        .submit-modal-hint {
+          color: var(--gray-500, #64748b);
+          font-size: 0.9rem;
+          margin: 0 0 20px;
+        }
+        .submit-form .form-group {
+          margin-bottom: 16px;
+        }
+        .submit-form label {
+          display: block;
+          font-weight: 600;
+          font-size: 0.85rem;
+          margin-bottom: 6px;
+        }
+        .submit-form input[type="text"],
+        .submit-form select,
+        .submit-form textarea {
+          width: 100%;
+          padding: 10px 12px;
+          border: 1px solid var(--gray-200, #e2e8f0);
+          border-radius: 8px;
+          font-size: 0.9rem;
+          font-family: inherit;
+        }
+        .submit-form .form-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .file-input-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 12px;
+          border: 1px dashed var(--gray-300, #cbd5e1);
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 0.9rem;
+        }
+        .submit-modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 12px;
+          margin-top: 24px;
+        }
+        [data-theme="dark"] .submit-modal {
+          background: #1e293b;
+          color: #f1f5f9;
+        }
+        [data-theme="dark"] .submit-form input[type="text"],
+        [data-theme="dark"] .submit-form select,
+        [data-theme="dark"] .submit-form textarea {
+          background: #0f172a;
+          border-color: rgba(255,255,255,0.1);
+          color: #f1f5f9;
+        }
+        [data-theme="dark"] .file-input-label {
+          border-color: rgba(255,255,255,0.15);
         }
       `}</style>
     </div>

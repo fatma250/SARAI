@@ -25,6 +25,7 @@ class Notification(Base):
     # Related entities
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=True)
     comment_id = Column(Integer, ForeignKey("comments.id", ondelete="CASCADE"), nullable=True)
+    resource_id = Column(Integer, ForeignKey("resources.id", ondelete="CASCADE"), nullable=True)
     
     # Link for action
     action_url = Column(String(500), nullable=True)
@@ -40,10 +41,11 @@ class Notification(Base):
     user = relationship("User", back_populates="notifications")
     project = relationship("Project", foreign_keys=[project_id])
     comment = relationship("Comment", foreign_keys=[comment_id])
-    
+    resource = relationship("Resource", foreign_keys=[resource_id])
+
     __table_args__ = (
         CheckConstraint(
-            "type IN ('project_approved', 'project_rejected', 'comment_added', 'mention', 'system', 'revision_requested')",
+            "type IN ('project_approved', 'project_rejected', 'comment_added', 'mention', 'system', 'revision_requested', 'resource_approved', 'resource_rejected')",
             name="chk_notification_type"
         ),
         CheckConstraint("is_read IN (0, 1)", name="chk_is_read"),
@@ -52,6 +54,7 @@ class Notification(Base):
         Index("idx_notifications_is_read", "is_read"),
         Index("idx_notifications_created_at", "created_at"),
         Index("idx_notifications_project_id", "project_id"),
+        Index("idx_notifications_resource_id", "resource_id"),
     )
     
     def to_dict(self):
@@ -63,6 +66,7 @@ class Notification(Base):
             "message": self.message,
             "project_id": self.project_id,
             "comment_id": self.comment_id,
+            "resource_id": self.resource_id,
             "action_url": self.action_url,
             "is_read": self.is_read,
             "created_at": self.created_at,

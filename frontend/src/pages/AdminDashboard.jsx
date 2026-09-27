@@ -233,6 +233,78 @@ function AdminDashboard() {
     }
   }
 
+  const handleApproveResource = async (resourceId) => {
+    setActionLoading(resourceId)
+    try {
+      const res = await fetch(`${API_BASE}/admin/resources/${resourceId}/approve`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setResources(prev => prev.map(r => r.id === resourceId ? updated : r))
+        toast.success('Resource approved and published!')
+        fetchStats()
+      } else {
+        const errData = await res.json()
+        toast.error('Failed to approve: ' + (errData.detail || 'Unknown error'))
+      }
+    } catch (err) {
+      toast.error('Network error: ' + err.message)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleRejectResource = async (resourceId) => {
+    const reason = window.prompt('Reason for rejecting this resource:')
+    if (!reason || !reason.trim()) return
+    setActionLoading(resourceId)
+    try {
+      const res = await fetch(`${API_BASE}/admin/resources/${resourceId}/reject`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setResources(prev => prev.map(r => r.id === resourceId ? updated : r))
+        toast.info('Resource rejected.')
+        fetchStats()
+      } else {
+        const errData = await res.json()
+        toast.error('Failed to reject: ' + (errData.detail || 'Unknown error'))
+      }
+    } catch (err) {
+      toast.error('Network error: ' + err.message)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleDeleteResource = async (resourceId, title) => {
+    if (!window.confirm(`Delete resource "${title}"? This cannot be undone.`)) return
+    setActionLoading(resourceId)
+    try {
+      const res = await fetch(`${API_BASE}/resources/${resourceId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      if (res.ok) {
+        setResources(prev => prev.filter(r => r.id !== resourceId))
+        toast.success('Resource deleted.')
+        fetchStats()
+      } else {
+        const errData = await res.json()
+        toast.error('Failed to delete: ' + (errData.detail || 'Unknown error'))
+      }
+    } catch (err) {
+      toast.error('Network error: ' + err.message)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   const toggleProjectSelection = (id) => {
     setSelectedProjectIds(prev => {
       const next = new Set(prev)
@@ -898,6 +970,7 @@ function AdminDashboard() {
                       <tr>
                         <th>Title</th>
                         <th>Type / Category</th>
+                        <th>Status</th>
                         <th><FaEye /> Views</th>
                         <th><FaDownload /> Downloads</th>
                         <th>File</th>
@@ -907,7 +980,7 @@ function AdminDashboard() {
                     <tbody>
                       {resources.length === 0 ? (
                         <tr>
-                          <td colSpan="6" className="empty-table">No resources yet</td>
+                          <td colSpan="7" className="empty-table">No resources yet</td>
                         </tr>
                       ) : (
                         resources.map((r) => {
@@ -916,6 +989,13 @@ function AdminDashboard() {
                             <tr key={r.id}>
                               <td>{r.title}</td>
                               <td>{r.type} · {r.category}</td>
+                              <td>
+                                <span className={`status-label ${r.status}`}>
+                                  {r.status === 'pending' ? 'Pending Review' :
+                                   r.status === 'approved' ? 'Approved' :
+                                   r.status === 'rejected' ? 'Rejected' : r.status}
+                                </span>
+                              </td>
                               <td>{r.views_count || 0}</td>
                               <td>{r.downloads || 0}</td>
                               <td>
@@ -928,15 +1008,46 @@ function AdminDashboard() {
                                 )}
                               </td>
                               <td>
-                                <label className="btn-upload-resource" title="Upload a real file for this resource">
-                                  {uploadingResourceId === r.id ? 'Uploading…' : <><FaUpload /> Upload</>}
-                                  <input
-                                    type="file"
-                                    style={{ display: 'none' }}
-                                    disabled={uploadingResourceId === r.id}
-                                    onChange={(e) => handleResourceFileUpload(r.id, e.target.files[0])}
-                                  />
-                                </label>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                  {r.status === 'pending' && (
+                                    <>
+                                      <button
+                                        className="btn-action-approve"
+                                        onClick={() => handleApproveResource(r.id)}
+                                        disabled={actionLoading === r.id}
+                                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                                      >
+                                        {actionLoading === r.id ? '...' : 'Approve'}
+                                      </button>
+                                      <button
+                                        className="btn-action-reject"
+                                        onClick={() => handleRejectResource(r.id)}
+                                        disabled={actionLoading === r.id}
+                                        style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                                      >
+                                        Reject
+                                      </button>
+                                    </>
+                                  )}
+                                  <label className="btn-upload-resource" title="Upload a real file for this resource">
+                                    {uploadingResourceId === r.id ? 'Uploading…' : <><FaUpload /> Upload</>}
+                                    <input
+                                      type="file"
+                                      style={{ display: 'none' }}
+                                      disabled={uploadingResourceId === r.id}
+                                      onChange={(e) => handleResourceFileUpload(r.id, e.target.files[0])}
+                                    />
+                                  </label>
+                                  <button
+                                    className="btn-action-reject"
+                                    title="Delete resource"
+                                    onClick={() => handleDeleteResource(r.id, r.title)}
+                                    disabled={actionLoading === r.id}
+                                    style={{ padding: '6px 12px', fontSize: '0.8rem' }}
+                                  >
+                                    <FaTrash />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           )

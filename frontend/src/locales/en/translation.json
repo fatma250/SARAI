@@ -280,7 +280,19 @@
     "submitResource": "Submit Resource",
     "download": "Download",
     "language": "Language",
-    "size": "Size"
+    "size": "Size",
+    "submitHint": "Your resource will be reviewed by an admin before it appears in the library.",
+    "submitTitleLabel": "Title",
+    "submitTitlePlaceholder": "e.g. AI Ethics Guidelines 2026",
+    "submitDescriptionLabel": "Description",
+    "submitFileLabel": "File",
+    "submitChooseFile": "Choose a file",
+    "submitting": "Submitting...",
+    "submitCta": "Submit for Review",
+    "submitLoginRequired": "Please login to submit a resource",
+    "submitFileRequired": "Please attach a file",
+    "submitSuccess": "Your resource has been submitted for review!",
+    "submitSuccessPublished": "Resource published!"
   },
   "analytics": {
     "title": "Regional AI",

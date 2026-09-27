@@ -27,6 +27,12 @@ class ResourceResponse(ResourceBase):
     id: int
     downloads: int
     views_count: int
+    status: str
+    submitted_by: Optional[int] = None
+    submitted_at: Optional[datetime] = None
+    rejection_reason: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    reviewed_by: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 

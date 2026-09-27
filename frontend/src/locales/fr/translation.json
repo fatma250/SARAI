@@ -280,7 +280,19 @@
     "submitResource": "Soumettre une Ressource",
     "download": "Télécharger",
     "language": "Langue",
-    "size": "Taille"
+    "size": "Taille",
+    "submitHint": "Votre ressource sera examinée par un administrateur avant d'apparaître dans la bibliothèque.",
+    "submitTitleLabel": "Titre",
+    "submitTitlePlaceholder": "ex. Lignes directrices sur l'éthique de l'IA 2026",
+    "submitDescriptionLabel": "Description",
+    "submitFileLabel": "Fichier",
+    "submitChooseFile": "Choisir un fichier",
+    "submitting": "Envoi en cours...",
+    "submitCta": "Soumettre pour révision",
+    "submitLoginRequired": "Veuillez vous connecter pour soumettre une ressource",
+    "submitFileRequired": "Veuillez joindre un fichier",
+    "submitSuccess": "Votre ressource a été soumise pour révision !",
+    "submitSuccessPublished": "Ressource publiée !"
   },
   "analytics": {
     "title": "Intelligence IA",

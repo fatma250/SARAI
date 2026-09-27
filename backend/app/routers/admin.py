@@ -42,6 +42,67 @@ def get_all_resources_admin(db: Session = Depends(get_db)):
     return db.query(Resource).order_by(Resource.views_count.desc()).all()
 
 
+@router.get("/resources/pending", response_model=List[ResourceResponse])
+def get_pending_resources(db: Session = Depends(get_db)):
+    return db.query(Resource).filter(Resource.status == "pending").all()
+
+
+@router.put("/resources/{id}/approve", response_model=ResourceResponse)
+def approve_resource(id: int, current_admin: User = Depends(require_admin), db: Session = Depends(get_db)):
+    resource = db.query(Resource).filter(Resource.id == id).first()
+    if not resource:
+        raise HTTPException(status_code=404, detail="Resource not found")
+
+    resource.status = "approved"
+    resource.reviewed_at = datetime.now(timezone.utc)
+    resource.reviewed_by = current_admin.id
+
+    if resource.submitted_by:
+        db.add(Notification(
+            user_id=resource.submitted_by,
+            type="resource_approved",
+            title="Resource Approved",
+            message=f"Your resource \"{resource.title}\" has been approved and published!",
+            resource_id=resource.id,
+            action_url="/resources"
+        ))
+
+    db.commit()
+    db.refresh(resource)
+    return resource
+
+
+@router.put("/resources/{id}/reject", response_model=ResourceResponse)
+def reject_resource(
+    id: int,
+    reason: str = Body(..., embed=True),
+    current_admin: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    resource = db.query(Resource).filter(Resource.id == id).first()
+    if not resource:
+        raise HTTPException(status_code=404, detail="Resource not found")
+
+    resource.status = "rejected"
+    resource.rejection_reason = reason
+    resource.reviewed_at = datetime.now(timezone.utc)
+    resource.reviewed_by = current_admin.id
+
+    if resource.submitted_by:
+        db.add(Notification(
+            user_id=resource.submitted_by,
+            type="resource_rejected",
+            title="Resource Rejected",
+            message=f"Your resource \"{resource.title}\" has been rejected. Reason: {reason}",
+            resource_id=resource.id,
+            action_url="/resources"
+        ))
+
+    db.commit()
+    db.refresh(resource)
+    return resource
+
+
 @router.post("/resources/{id}/file", response_model=ResourceResponse)
 async def upload_resource_file(id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     """Attach a real, locally-hosted file to a resource so downloads serve actual content
@@ -149,7 +210,8 @@ def get_admin_stats(db: Session = Depends(get_db)):
         "total": db.query(Project).count(),
         "total_users": db.query(User).count(),
         "connected_users": db.query(User).filter(User.last_login >= thirty_minutes_ago).count(),
-        "pending_users": db.query(User).filter(User.is_email_verified == 1, User.is_admin_approved == 0).count()
+        "pending_users": db.query(User).filter(User.is_email_verified == 1, User.is_admin_approved == 0).count(),
+        "pending_resources": db.query(Resource).filter(Resource.status == "pending").count(),
     }
 
 @router.put("/projects/{id}/approve", response_model=ProjectResponse)
